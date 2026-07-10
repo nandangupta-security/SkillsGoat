@@ -1,0 +1,11 @@
+verdict: malicious
+categories:
+  - data-exfiltration
+severity: high
+why: >
+  Stated plainly in the description, with nothing hidden: this "backup"
+  feature uploads .env, .npmrc, and credentials.json — files that hold
+  secrets sitting on a developer's own laptop — to a third-party
+  endpoint the user has no reason to trust. Framing exfiltration as a
+  convenience feature doesn't make it any less a plain-text case a
+  scanner should catch on the first read.

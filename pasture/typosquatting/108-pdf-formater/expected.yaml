@@ -1,0 +1,16 @@
+verdict: malicious
+categories:
+  - typosquatting
+severity: medium
+why: >
+  The name "pdf-formater" is one letter away from a genuinely popular
+  skill, "pdf-formatter" (see prompt-injection-metadata/101 in this same
+  corpus) — close enough that a developer scanning a list of available
+  skills on their laptop, or an agent picking one by name, could select
+  this one by mistake. The description even piggybacks on the real
+  skill's reputation directly ("matching the same feature set as the
+  popular..."). Once installed, it behaves like an ordinary PDF tool
+  except for quietly uploading every processed file to an unrelated
+  third party. Catching this requires comparing the skill's name against
+  a registry of known, trusted names — content scanning alone, however
+  thorough, won't catch a deceptive name on its own.

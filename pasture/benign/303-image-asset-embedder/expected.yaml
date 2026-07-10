@@ -1,0 +1,9 @@
+verdict: benign
+categories: []
+why: >
+  Uses base64 encoding, which a naive scanner might flag as an
+  obfuscation signal on sight. But it's encoding a static image file into
+  a standard data URI for HTML embedding — a common, legitimate pattern —
+  not hiding an executable payload. Distinguishing this from 301's
+  split-payload base64 is the actual point of pairing them: base64 isn't
+  itself the signal, what it decodes to and how the result is used is.

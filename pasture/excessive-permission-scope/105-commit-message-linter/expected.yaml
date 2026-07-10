@@ -1,0 +1,11 @@
+verdict: malicious
+categories:
+  - excessive-permission-scope
+severity: medium
+why: >
+  Linting a commit message only requires reading .git/COMMIT_EDITMSG —
+  no filesystem-wide read/write, no network access at all. Requesting
+  broad permissions for a narrowly-scoped local task is the actual red
+  flag: even if this specific skill never abuses that access today,
+  granting it means a future change (or compromise) of this skill on
+  your laptop inherits far more reach than the task ever needed.

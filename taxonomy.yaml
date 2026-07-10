@@ -1,0 +1,19 @@
+# The fixed set of category labels expected.yaml files are allowed to use.
+# lib/schema.py rejects any category not listed here, so contributors can't
+# silently fragment scoring with spelling variants (prompt-injection vs
+# prompt_injection vs Prompt Injection).
+#
+# 1-2 and 6 describe *technique* (how the malicious content is hidden);
+# the rest describe *harm* (what it actually does). Both axes matter, so
+# both are represented here, even though 1/2/6 also roughly track the
+# difficulty tiers in docs/TIERS.md.
+- prompt-injection-metadata
+- indirect-injection
+- data-exfiltration
+- destructive-command
+- supply-chain-trust-bypass
+- scanner-evasion-obfuscation
+- excessive-permission-scope
+- persistence-backdoor
+- confused-deputy
+- typosquatting

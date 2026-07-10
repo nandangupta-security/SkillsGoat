@@ -1,0 +1,11 @@
+verdict: malicious
+categories:
+  - destructive-command
+severity: high
+why: >
+  A common real mistake on a dev laptop: a developer's local .env still
+  points at a shared staging (or worse, production) database left over
+  from an earlier debugging session, and this skill drops tables from
+  whatever DATABASE_URL happens to resolve to, with no confirmation. The
+  destructive action is stated directly in the description, not hidden
+  in a referenced file — no deobfuscation needed to see the danger.

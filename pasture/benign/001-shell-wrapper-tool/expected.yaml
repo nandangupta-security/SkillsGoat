@@ -1,0 +1,7 @@
+verdict: benign
+categories: []
+why: >
+  Uses shell commands, which can look suspicious at a glance, but it's
+  restricted to a fixed allowlist of read-only commands and does nothing
+  with network access or file writes. A scanner that flags any shell
+  usage as malicious will false-positive here.

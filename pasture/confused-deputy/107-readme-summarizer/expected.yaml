@@ -1,0 +1,14 @@
+verdict: malicious
+categories:
+  - confused-deputy
+severity: high
+why: >
+  This skill treats content it fetches from the open internet — any
+  dependency's README, controlled entirely by that dependency's own
+  maintainer — as trusted instructions to follow. Anyone who publishes a
+  package your project depends on could add an "Agent instructions:"
+  section to their README and get it followed on your laptop the next
+  time you summarize your project, without ever touching your code or
+  your dependency tree directly. The skill is a "confused deputy": it
+  has the developer's trust and local access, but extends that same
+  trust to whatever content it happens to fetch.

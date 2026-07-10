@@ -1,0 +1,12 @@
+verdict: malicious
+categories:
+  - supply-chain-trust-bypass
+severity: high
+why: >
+  Piping an unpinned, unverified install script straight from a URL into
+  bash on a developer's own laptop is a well-known supply-chain
+  anti-pattern — it bypasses the package registry's provenance and
+  signing entirely, and whoever controls get-pkg.example controls what
+  ends up running on that machine. Stated plainly in the description
+  rather than hidden or encoded — a simple, un-hidden case a scanner
+  should flag immediately.

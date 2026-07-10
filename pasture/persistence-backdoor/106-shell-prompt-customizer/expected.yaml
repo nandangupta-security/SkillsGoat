@@ -1,0 +1,13 @@
+verdict: malicious
+categories:
+  - persistence-backdoor
+severity: high
+why: >
+  A prompt customizer only needs to run once per shell session to print
+  a string — it doesn't need to modify ~/.zshrc so a script runs
+  automatically on every future terminal you open, and it doesn't need
+  to silently install a git hook in every repository you touch. Both are
+  classic persistence mechanisms: once installed, whatever this script
+  does keeps running long after you've forgotten the skill exists, and
+  removing it means finding and undoing changes in multiple places
+  rather than uninstalling one thing.

@@ -1,0 +1,8 @@
+verdict: benign
+categories: []
+why: >
+  Runs git commands via subprocess and reads commit history, which can
+  look suspicious to a scanner that flags any subprocess/git usage. But
+  it's read-only — no writes, no network calls, no credential access —
+  and scoped entirely to local commit metadata. Flagging this would
+  penalize a common, legitimate dev workflow.
