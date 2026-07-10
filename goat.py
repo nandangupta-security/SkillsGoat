@@ -1,8 +1,16 @@
 import argparse
 import os
+import sys
 
 from lib.corpus import PASTURE_DIR, load_entries, tier_of
 from lib.schema import load_taxonomy, validate_expected
+
+
+def c(text, code):
+    """Wrap text in an ANSI color code, unless stdout isn't a terminal."""
+    if not sys.stdout.isatty():
+        return text
+    return f"\033[{code}m{text}\033[0m"
 
 SKILL_TEMPLATE = """---
 name: {slug}
@@ -25,15 +33,24 @@ why: >
 
 
 def cmd_quiz(args):
-    for entry in load_entries():
-        print("=" * 60)
+    entries = load_entries()
+    total = len(entries)
+    correct_count = 0
+
+    for i, entry in enumerate(entries, start=1):
+        print(c(f"\n[{i} of {total}]", "36;1"))
+        print(c("=" * 60, "36"))
         with open(entry.skill_path) as f:
             print(f.read())
-        print("=" * 60)
+        print(c("=" * 60, "36"))
 
         guess = input("Is this skill benign or malicious? ").strip().lower()
         answer = entry.expected["verdict"]
-        print("Correct!" if guess == answer else f"Not quite. This one is: {answer}")
+        if guess == answer:
+            correct_count += 1
+            print(c("Correct!", "32;1"))
+        else:
+            print(c(f"Not quite. This one is: {answer}", "31;1"))
 
         input("\n(press enter to see the category) ")
         categories = entry.expected.get("categories") or []
@@ -42,6 +59,10 @@ def cmd_quiz(args):
         input("\n(press enter to see why) ")
         print("Why:", entry.expected["why"])
         print()
+
+    print(c("=" * 60, "36"))
+    print(c(f"Score: {correct_count} / {total} correct", "1"))
+    print(c("=" * 60, "36"))
 
 
 def cmd_lint(args):
