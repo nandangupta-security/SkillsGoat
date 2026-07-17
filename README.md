@@ -3,8 +3,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 
-**A labeled benchmark for the AI agent skill supply chain — and a live
-evaluation of production skill scanners against it.**
+**Learn what makes an AI agent skill dangerous by working through real,
+labeled examples — then use the same corpus to find out whether a real
+scanner actually catches them.**
 
 Agent skills — `SKILL.md` packages that extend what an AI agent can do —
 are a new way to distribute code, and they come with a new trust
@@ -18,10 +19,25 @@ what did it miss?**
 
 If you've used [WebGoat](https://owasp.org/www-project-webgoat/) or
 [DVWA](https://github.com/digininja/DVWA), you already know the shape of
-this project — a set of deliberately vulnerable, labeled examples. The
-difference here is that the labels double as ground truth: every entry
-comes with a machine-readable verdict, so you can point any scanner at
-it and score what it actually caught, not just eyeball the output.
+this project — a set of deliberately vulnerable, labeled examples you
+work through to learn the patterns yourself. What's different here is
+that the same labels double as machine-readable ground truth, which
+turns the corpus into a benchmark too: point a real scanner at it
+instead, and score exactly what it caught, not just eyeball the output.
+
+## Learning from it
+
+Run `python3 goat.py quiz` and you get one skill's `SKILL.md` at a
+time — read it cold, guess benign or malicious, then reveal the category
+and the plain-English reasoning behind the label, one step at a time.
+It sticks better than reading a list of vulnerability classes, because
+you're pattern-matching against a real example instead of a definition.
+
+The corpus is organized so you can study it either way: by category
+(`pasture/INDEX_BY_CATEGORY.md`) to learn one technique at a time, or by
+difficulty tier (`pasture/INDEX_BY_TIER.md`) to work up from the
+obvious cases to the ones purpose-built to slip past a skim — human or
+automated.
 
 ## Evaluating a scanner
 
@@ -34,10 +50,12 @@ what comes back against `expected.yaml`, and you know exactly what that
 scanner catches, what it misses, and what it wrongly flags — not just
 whatever the vendor's own marketing claims.
 
-Real evaluations run this way, against real scanners, live under
-[`evaluations/`](evaluations/) — one write-up per scanner, each with its
-full methodology and raw evidence alongside it. It's a growing list, not
-a one-time report.
+Real evaluations run this way, against real scanners — so far that's
+[NVIDIA's SkillSpector](evaluations/skillspector/report.md) and
+[Cisco's skill-scanner](evaluations/skill-scanner/report.md), with more
+on the way. Each write-up has its full methodology and raw evidence
+alongside it (a styled HTML version is in the same folder too). It's a
+growing list, not a one-time report.
 
 > **Heads up.** Every "malicious" entry in this repo does something it
 > shouldn't — hidden instructions, fake curl-pipe-bash installers,
@@ -80,8 +98,7 @@ hard the corpus can get.
     pip install -r requirements.txt
     python3 goat.py quiz
 
-For each skill, you'll see its `SKILL.md`, take a guess, and reveal the
-category and full reasoning one step at a time:
+Here's one entry from the quiz:
 
 ```
 ============================================================
@@ -129,7 +146,10 @@ contribution can't quietly skew a scanner's score down the line.
           scripts/, resources/      only when the entry needs them
       INDEX_BY_CATEGORY.md       generated — the learning view
       INDEX_BY_TIER.md           generated — the scanner-difficulty view
-    evaluations/                scanner evaluation write-ups: raw report + results page, one folder per scanner
+    evaluations/                scanner write-ups, one folder per scanner
+      <scanner>/report.json        raw scanner output, unedited
+      <scanner>/report.md          the write-up — renders natively on GitHub
+      <scanner>/index.html         the same write-up, styled (open it locally)
     lib/corpus.py                loads every entry, derives its tier from its id
     lib/schema.py                validates expected.yaml against taxonomy.yaml
     goat.py                      the CLI (quiz / lint / index / new)
