@@ -154,9 +154,10 @@ def cmd_new(args):
 
     slug = args.name.strip().lower().replace(" ", "-")
     folder = os.path.join(category_dir, f"{next_id:03d}-{slug}")
-    os.makedirs(folder)
+    skill_dir = os.path.join(folder, "skill")
+    os.makedirs(skill_dir)
 
-    with open(os.path.join(folder, "SKILL.md"), "w") as f:
+    with open(os.path.join(skill_dir, "SKILL.md"), "w") as f:
         f.write(SKILL_TEMPLATE.format(slug=slug, title=args.name.title()))
 
     with open(os.path.join(folder, "expected.yaml"), "w") as f:

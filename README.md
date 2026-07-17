@@ -132,8 +132,10 @@ against once it lands.
     pasture/                    the corpus, one folder per category
       <category>/README.md       what that category tests, one paragraph
       <category>/<id>-<name>/
-        SKILL.md                 the example skill
         expected.yaml             verdict, categories, why — the ground truth
+        skill/                    the example skill — point a scanner here, not at <id>-<name>/
+          SKILL.md                 same file a scanner or agent would load
+          scripts/, resources/      only when the entry needs them
       INDEX_BY_CATEGORY.md       generated — the learning view
       INDEX_BY_TIER.md           generated — the scanner-difficulty view
     lib/corpus.py                loads every entry, derives its tier from its id

