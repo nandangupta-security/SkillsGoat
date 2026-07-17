@@ -1,16 +1,43 @@
 # SkillsGoat
 
-**Learn what makes an AI agent skill dangerous by reading real, working
-examples of one — then use the same corpus to find out whether your
-scanner actually catches them.**
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+
+**A labeled benchmark for the AI agent skill supply chain — and a live
+evaluation of production skill scanners against it.**
+
+Agent skills — `SKILL.md` packages that extend what an AI agent can do —
+are a new way to distribute code, and they come with a new trust
+problem. An agent reads a skill's description into its context
+automatically, often before any human looks at it. Any scripts the skill
+bundles run with your local privileges, same as anything else you'd
+install. Scanners for this format are starting to show up. SkillsGoat
+exists to ask the question none of them can yet answer for themselves:
+**when a scanner says a skill is clean, what did it actually check, and
+what did it miss?**
 
 If you've used [WebGoat](https://owasp.org/www-project-webgoat/) or
 [DVWA](https://github.com/digininja/DVWA), you already know the shape of
-this project. Instead of explaining prompt injection or data
-exfiltration in the abstract, SkillsGoat hands you 15 real Claude Agent
-Skills — some benign, most deliberately malicious — and lets you sit with
-them: guess which is which, get told why you're right or wrong, then see
-exactly how a scanner would need to look at the file to catch it.
+this project — a set of deliberately vulnerable, labeled examples. The
+difference here is that the labels double as ground truth: every entry
+comes with a machine-readable verdict, so you can point any scanner at
+it and score what it actually caught, not just eyeball the output.
+
+## Evaluating a scanner
+
+Every entry's `expected.yaml` spells out what a correct scanner should
+conclude. Every entry's actual scan target lives in its own `skill/`
+subfolder, with the answer key sitting outside it — so you can point a
+scanner (or its recursive/batch mode) straight at `pasture/`, and it'll
+find all 15 skills on its own without ever seeing the answer key. Score
+what comes back against `expected.yaml`, and you know exactly what that
+scanner catches, what it misses, and what it wrongly flags — not just
+whatever the vendor's own marketing claims.
+
+Real evaluations run this way, against real scanners, live under
+[`evaluations/`](evaluations/) — one write-up per scanner, each with its
+full methodology and raw evidence alongside it. It's a growing list, not
+a one-time report.
 
 > **Heads up.** Every "malicious" entry in this repo does something it
 > shouldn't — hidden instructions, fake curl-pipe-bash installers,
@@ -20,35 +47,11 @@ exactly how a scanner would need to look at the file to catch it.
 > patterns into anything you ship, and don't point a skill scanner's
 > "auto-fix" mode at this repo and walk away.
 
-## Why this exists
-
-Agent skills — `SKILL.md` packages that extend what an AI agent can do —
-are a genuinely new distribution format, and they come with a genuinely
-new supply-chain surface. A skill's description gets read into an
-agent's context automatically, often before any human looks at it
-closely. Its bundled scripts run with your local privileges, same as any
-other code you'd `pip install` or `npm install`. Scanners for this format
-are starting to show up, which is great — but there's no shared,
-labeled benchmark to answer the question that actually matters: **when a
-scanner tells you a skill is clean, how do you know it checked the right
-things?**
-
-So SkillsGoat tries to do two jobs with one corpus:
-
-1. **Teach you the patterns.** Work through the quiz, guess
-   benign-or-malicious, and watch the reasoning unfold one step at a
-   time — the category, then the plain-English why. It sticks better
-   than reading a list of vulnerability classes.
-2. **Grade the tools.** Every entry ships with a labeled ground truth
-   (`expected.yaml`), so any scanner can be pointed at the corpus and
-   scored on what it actually caught — including what it wrongly flagged
-   on the benign entries, which matters just as much as what it missed.
-
 ## What's inside
 
 **15 example skills across 10 vulnerability categories**, plus a
-`benign` set that looks suspicious on purpose so you can test for false
-positives too:
+`benign` set that looks suspicious on purpose so false positives get
+tested too:
 
 | Category | What it tests |
 |---|---|
@@ -113,18 +116,6 @@ should catch.
 duplicate IDs, unknown categories, and missing fields, so a sloppy
 contribution can't quietly skew a scanner's score down the line.
 
-## Evaluating a scanner — where this is headed
-
-The ground truth is already in place: every entry's `expected.yaml`
-states exactly what a correct scanner should conclude, category by
-category. What's still ahead is the harness that makes that useful —
-a thin per-scanner adapter (`scan(skill_dir) -> {verdict, categories}`)
-so you can point any scanner at the corpus and get back precision and
-recall per category and per tier, plus the specific entries it missed
-and the benign ones it false-positived on. The corpus and taxonomy are
-locked down now precisely so that harness has something solid to grade
-against once it lands.
-
 ## Layout
 
     taxonomy.yaml              the fixed list of allowed category labels
@@ -138,11 +129,17 @@ against once it lands.
           scripts/, resources/      only when the entry needs them
       INDEX_BY_CATEGORY.md       generated — the learning view
       INDEX_BY_TIER.md           generated — the scanner-difficulty view
+    evaluations/                scanner evaluation write-ups: raw report + results page, one folder per scanner
     lib/corpus.py                loads every entry, derives its tier from its id
     lib/schema.py                validates expected.yaml against taxonomy.yaml
     goat.py                      the CLI (quiz / lint / index / new)
 
-## Adding your own entry
+## Contributing
+
+This is early, open source, and there's a lot of room to make it
+better.
+
+To add a corpus entry:
 
     python3 goat.py new --category <category> --tier <tier> --name "<name>"
 
@@ -150,10 +147,33 @@ against once it lands.
 `--tier` is one of `000`/`100`/`200`/`300` and only affects the entry's
 numeric ID prefix — the folder it lands in is always
 `pasture/<category>/`. Run `python3 goat.py lint` before you commit it.
-
 If you've got a real-world pattern you think is missing — a technique
 your own scanner failed to catch, a false positive that burned you —
 that's exactly the kind of entry this corpus wants.
+
+Beyond new entries, here's what's still open:
+
+- **A real scoring script.** Evaluations under `evaluations/` are
+  currently scored by hand. Turning that into an actual
+  `scan(skill_dir) -> {verdict, categories}` adapter, so any scanner
+  gets scored automatically, is the biggest thing left to build.
+- **Evaluate a scanner.** Pick one, run it against `pasture/`, and write
+  up what you find under `evaluations/`. Any scanner is fair game,
+  including ones we haven't looked at yet.
+- **Other skill formats.** Claude Code, Codex CLI, Cursor rules, and
+  others all package things slightly differently — broader coverage
+  would make this more useful as a shared benchmark.
+
+Open an issue or send a PR — a new corpus entry, a scanner write-up, or
+a piece of the scoring script are all welcome.
+
+## Responsible disclosure
+
+Where evaluating a scanner surfaces a real weakness in a maintained
+tool, we report it to the maintainer before publishing exploit-level
+detail. The `evaluations/` write-ups say when a finding is under
+disclosure and withhold the specific mechanism until that process
+concludes.
 
 ## Contributors
 
