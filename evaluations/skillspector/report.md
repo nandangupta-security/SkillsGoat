@@ -185,3 +185,9 @@ date — not a comprehensive verdict on SkillSpector. Unedited evidence:
 [`report.json`](report.json), produced by SkillSpector v2.3.13 on
 2026-07-17. A richer, styled version of this same report is also
 available as [`index.html`](index.html).
+
+**A follow-up evaluation with SkillSpector's LLM-based semantic stage
+enabled is now available at
+[`llm-enabled/report.md`](llm-enabled/report.md)** — it closes most of
+the gap described above, but two results (one blind spot, one false
+positive) survive unchanged even with the LLM stage on.

@@ -191,3 +191,9 @@ configuration, one date — not a comprehensive verdict on skill-scanner.
 Unedited evidence: [`report.json`](report.json), produced by
 skill-scanner v2.0.12 on 2026-07-17. A richer, styled version of this
 same report is also available as [`index.html`](index.html).
+
+**A follow-up evaluation with skill-scanner's LLM analyzer and
+meta-analyzer enabled is now available at
+[`llm-enabled/report.md`](llm-enabled/report.md)** — recall jumps from
+3/12 to 10/12 with no cost to precision, though two entries remain
+unrecoverable even with LLM analysis on.

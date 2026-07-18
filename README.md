@@ -54,8 +54,11 @@ Real evaluations run this way, against real scanners — so far that's
 [NVIDIA's SkillSpector](evaluations/skillspector/report.md) and
 [Cisco's skill-scanner](evaluations/skill-scanner/report.md), with more
 on the way. Each write-up has its full methodology and raw evidence
-alongside it (a styled HTML version is in the same folder too). It's a
-growing list, not a one-time report.
+alongside it (a styled HTML version is in the same folder too), plus a
+follow-up run with the scanner's optional LLM-based analysis turned on,
+since that changes results enough to be worth showing separately rather
+than folding into one number. It's a growing list, not a one-time
+report.
 
 > **Heads up.** Every "malicious" entry in this repo does something it
 > shouldn't — hidden instructions, fake curl-pipe-bash installers,
@@ -147,9 +150,13 @@ contribution can't quietly skew a scanner's score down the line.
       INDEX_BY_CATEGORY.md       generated — the learning view
       INDEX_BY_TIER.md           generated — the scanner-difficulty view
     evaluations/                scanner write-ups, one folder per scanner
-      <scanner>/report.json        raw scanner output, unedited
+      <scanner>/report.json        raw scanner output, static analysis only
       <scanner>/report.md          the write-up — renders natively on GitHub
       <scanner>/index.html         the same write-up, styled (open it locally)
+      <scanner>/llm-enabled/        follow-up run with the scanner's LLM stage turned on
+        report.json                  raw scanner output for that run
+        report.md                    the write-up, incl. how it compares to static-only
+        raw-report.md                the scanner's own auto-generated markdown, unedited
     lib/corpus.py                loads every entry, derives its tier from its id
     lib/schema.py                validates expected.yaml against taxonomy.yaml
     goat.py                      the CLI (quiz / lint / index / new)
