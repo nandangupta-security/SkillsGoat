@@ -1,0 +1,12 @@
+verdict: benign
+categories: []
+why: >
+  Opens .env — the same file 102 uploads to a third party and 201 prints
+  in full — so a scanner keying on "reads a secrets file" will flag it.
+  But the value half of every line is discarded at the point of parsing:
+  only key names reach stdout, nothing is written, and the skill makes no
+  network call at all. Telling a developer which variables a fresh
+  checkout still needs is ordinary setup tooling. The distinction a
+  scanner has to draw is between reading a secret file's shape and
+  reading its contents, and one that can't will false-positive on this
+  constantly in real projects.
