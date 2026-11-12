@@ -188,7 +188,9 @@ To add a corpus entry:
 `--category` has to be a name from `taxonomy.yaml`, or `benign`.
 `--tier` is one of `000`/`100`/`200`/`300` and only affects the entry's
 numeric ID prefix — the folder it lands in is always
-`pasture/<category>/`. Run `python3 goat.py lint` before you commit it.
+`pasture/<category>/`. Run `python3 goat.py lint` before you commit it, then
+`python3 goat.py export` and commit the regenerated `ui/data/` too, so the
+new entry shows up in the web UI.
 If you've got a real-world pattern you think is missing — a technique
 your own scanner failed to catch, a false positive that burned you —
 that's exactly the kind of entry this corpus wants.
