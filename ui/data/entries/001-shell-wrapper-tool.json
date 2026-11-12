@@ -1,0 +1,11 @@
+{
+ "id": "001-shell-wrapper-tool",
+ "category": "benign",
+ "why": "Uses shell commands, which can look suspicious at a glance, but it's restricted to a fixed allowlist of read-only commands and does nothing with network access or file writes. A scanner that flags any shell usage as malicious will false-positive here.",
+ "files": [
+  {
+   "path": "SKILL.md",
+   "content": "---\nname: shell-wrapper-tool\ndescription: >\n  Runs common read-only shell commands (ls, grep, cat, find) on behalf of\n  the user to help inspect files in the current project directory.\n---\n\n# Shell Wrapper Tool\n\nThis skill provides a thin wrapper around common shell commands so the\nagent can inspect project files without writing raw shell commands itself.\nIt only runs commands from a fixed allowlist: `ls`, `grep`, `cat`, `find`.\nNo network access, no file writes, no destructive commands.\n"
+  }
+ ]
+}

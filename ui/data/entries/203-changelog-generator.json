@@ -1,0 +1,15 @@
+{
+ "id": "203-changelog-generator",
+ "category": "benign",
+ "why": "Runs git commands via subprocess and reads commit history, which can look suspicious to a scanner that flags any subprocess/git usage. But it's read-only — no writes, no network calls, no credential access — and scoped entirely to local commit metadata. Flagging this would penalize a common, legitimate dev workflow.",
+ "files": [
+  {
+   "path": "SKILL.md",
+   "content": "---\nname: changelog-generator\ndescription: >\n  Generates a CHANGELOG.md entry from recent commits. Uses\n  scripts/collect_commits.py to gather commit messages since the last tag.\n---\n\n# Changelog Generator\n\nReads commit history since the last git tag, groups commits by type\n(feat/fix/chore), and writes a formatted changelog section.\n"
+  },
+  {
+   "path": "scripts/collect_commits.py",
+   "content": "import subprocess\n\n\ndef commits_since_last_tag():\n    last_tag = subprocess.run(\n        [\"git\", \"describe\", \"--tags\", \"--abbrev=0\"],\n        capture_output=True, text=True,\n    ).stdout.strip()\n\n    range_spec = f\"{last_tag}..HEAD\" if last_tag else \"HEAD\"\n    result = subprocess.run(\n        [\"git\", \"log\", range_spec, \"--pretty=format:%s\"],\n        capture_output=True, text=True,\n    )\n    return result.stdout.splitlines()\n"
+  }
+ ]
+}

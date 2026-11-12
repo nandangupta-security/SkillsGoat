@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkillsGoat · Learn</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1 id="home" tabindex="0" role="link">SkillsGoat</h1>
+  <p>Learn how AI agent skills get weaponized &mdash; one vulnerability category at a time.</p>
+  <nav class="topnav"><a href="index.html" aria-current="page">Learn</a><a href="quiz.html">Quiz</a></nav>
+  <div class="progress" id="progress"></div>
+</header>
+<main id="app"></main>
+
+<script>
+(function () {
+  var DATA = [];
+  var entryCache = {};
+  function getEntry(id) {
+    return entryCache[id] || (entryCache[id] = fetch("data/entries/" + id + ".json").then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }));
+  }
+  var app = document.getElementById("app");
+  var STORE = "skillsgoat.understood";
+
+  // localStorage can be blocked; the page must work without it.
+  function loadDone() {
+    try { return JSON.parse(localStorage.getItem(STORE) || "[]"); } catch (e) { return []; }
+  }
+  function saveDone(list) {
+    try { localStorage.setItem(STORE, JSON.stringify(list)); } catch (e) {}
+  }
+  var done = loadDone();
+
+  function el(tag, props, children) {
+    var n = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      if (props[k] === null) return;
+      if (k === "text") n.textContent = props[k];
+      else if (k === "class") n.className = props[k];
+      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), props[k]);
+      else n.setAttribute(k, props[k]);
+    });
+    (children || []).forEach(function (c) { if (c) n.appendChild(c); });
+    return n;
+  }
+
+  function pad(i) { return (i + 1 < 10 ? "0" : "") + (i + 1); }
+  function blurb(cat) {
+    var p = (cat.paragraphs[0] || "").replace(/`/g, "");
+    return p.length > 170 ? p.slice(0, 167).replace(/\s+\S*$/, "") + "…" : p;
+  }
+
+  function updateProgress() {
+    var n = DATA.filter(function (c) { return done.indexOf(c.slug) >= 0; }).length;
+    var p = document.getElementById("progress");
+    p.textContent = "";
+    p.appendChild(el("span", { text: "Understood " }));
+    p.appendChild(el("b", { text: n + " / " + DATA.length }));
+    p.appendChild(el("span", { text: " categories" }));
+    if (done.length) {
+      p.appendChild(el("span", { text: " · " }));
+      p.appendChild(el("button", { class: "ghost small", text: "Reset progress", onclick: function () {
+        if (!confirm("Clear all your 'understood' marks?")) return;
+        done = []; saveDone(done); route();
+      } }));
+    }
+  }
+
+  function go(hash) { location.hash = hash; }
+
+  function renderHome() {
+    app.textContent = "";
+    var grid = el("div", { class: "grid" });
+    DATA.forEach(function (cat, i) {
+      var isDone = done.indexOf(cat.slug) >= 0;
+      var meta = el("div", { class: "meta" }, [
+        el("span", { text: cat.entries.length + (cat.entries.length === 1 ? " example" : " examples") + " · " }),
+        isDone ? el("span", { class: "done-badge", text: "✓ understood" }) : el("span", { text: "not started" })
+      ]);
+      grid.appendChild(el("div", { class: "card" }, [
+        el("h2", {}, [el("span", { class: "num", text: "SKILL" + pad(i) }), el("span", { text: cat.title })]),
+        el("p", { text: blurb(cat) }),
+        meta,
+        el("div", {}, [el("button", { text: "Start Learning", "aria-label": "Start learning " + cat.title, onclick: function () { go("#/" + cat.slug); } })])
+      ]));
+    });
+    app.appendChild(grid);
+  }
+
+  function renderDetail(idx) {
+    var cat = DATA[idx];
+    app.textContent = "";
+    var entryIdx = 0, fileIdx = 0;
+
+    var exampleHost = el("div");
+    function drawExamples() {
+      exampleHost.textContent = "";
+      if (!cat.entries.length) { exampleHost.appendChild(el("p", { class: "empty", text: "No examples in the corpus yet." })); return; }
+      var meta = cat.entries[entryIdx];
+      exampleHost.appendChild(el("p", { class: "empty", text: "Loading…" }));
+      getEntry(meta.id).then(function (body) {
+        drawEntry(meta, body);
+      }).catch(function () {
+        exampleHost.textContent = "";
+        exampleHost.appendChild(el("p", { class: "empty", text: "Couldn't load this example." }));
+      });
+    }
+    function drawEntry(m, body) {
+      exampleHost.textContent = "";
+      var e = { id: m.id, tier: m.tier, tierName: m.tierName, verdict: m.verdict, severity: m.severity, why: body.why, files: body.files };
+      var tabs = el("div", { class: "tabs", role: "tablist", "aria-label": "Examples" });
+      cat.entries.forEach(function (x, i) {
+        tabs.appendChild(el("button", { class: "tab", role: "tab", "aria-selected": String(i === entryIdx), text: "Tier " + x.tier + " · " + x.id,
+          onclick: function () { entryIdx = i; fileIdx = 0; drawExamples(); } }));
+      });
+      var ftabs = el("div", { class: "tabs", role: "tablist", "aria-label": "Files in this skill" });
+      e.files.forEach(function (f, i) {
+        ftabs.appendChild(el("button", { class: "tab file", role: "tab", "aria-selected": String(i === fileIdx), text: f.path,
+          onclick: function () { fileIdx = i; drawExamples(); } }));
+      });
+      exampleHost.appendChild(tabs);
+      exampleHost.appendChild(el("p", {}, [
+        el("span", { class: "verdict " + e.verdict, text: e.verdict.toUpperCase() }),
+        el("span", { class: "meta", text: "difficulty: " + e.tierName + (e.severity ? " · severity: " + e.severity : "") })
+      ]));
+      exampleHost.appendChild(ftabs);
+      exampleHost.appendChild(el("pre", { text: e.files[fileIdx].content }));
+      exampleHost.appendChild(el("div", { class: "why" }, [el("strong", { text: "Why: " }), el("span", { text: e.why })]));
+    }
+    drawExamples();
+
+    var isDone = done.indexOf(cat.slug) >= 0;
+    var doneBtn = el("button", { class: isDone ? "ghost" : "", text: isDone ? "✓ Understood (undo)" : "Mark as understood",
+      onclick: function () {
+        done = isDone ? done.filter(function (s) { return s !== cat.slug; }) : done.concat(cat.slug);
+        saveDone(done); updateProgress(); renderDetail(idx);
+      } });
+
+    app.appendChild(el("div", { class: "detail" }, [
+      el("button", { class: "ghost back", text: "◂ All categories", onclick: function () { go("#/"); } }),
+      el("h2", { text: cat.title }),
+      el("div", { class: "sub", text: "SKILL" + pad(idx) + " · " + cat.slug }),
+      el("div", { class: "warn", text: "These examples are deliberately malicious but unarmed (URLs point at *.example). They are shown as text only — never run them." }),
+      el("div", { class: "panel" }, [el("h3", { text: "What it is" })].concat(
+        cat.paragraphs.map(function (p) { return el("p", { text: p.replace(/`/g, "") }); }))),
+      el("div", { class: "panel" }, [el("h3", { text: "Examples, easiest to hardest" }), exampleHost]),
+      el("div", { class: "nav" }, [
+        el("button", { class: "ghost", text: "◂ Previous", disabled: idx === 0 ? "" : null,
+          onclick: function () { go("#/" + DATA[idx - 1].slug); } }),
+        doneBtn,
+        el("button", { class: "ghost", text: "Next ▸", disabled: idx === DATA.length - 1 ? "" : null,
+          onclick: function () { go("#/" + DATA[idx + 1].slug); } })
+      ])
+    ]));
+    window.scrollTo(0, 0);
+  }
+
+  function fail() {
+    app.textContent = "";
+    app.appendChild(el("div", { class: "panel" }, [
+      el("h3", { text: "Couldn't load the data" }),
+      el("p", { text: "This page loads JSON, so it must be served over HTTP, not opened as a file. Run: python3 goat.py export && python3 goat.py serve" })
+    ]));
+  }
+
+  function route() {
+    var slug = location.hash.replace(/^#\/?/, "");
+    var idx = DATA.findIndex(function (c) { return c.slug === slug; });
+    updateProgress();
+    if (idx >= 0) renderDetail(idx); else renderHome();
+  }
+
+  var home = document.getElementById("home");
+  home.addEventListener("click", function () { go("#/"); });
+  home.addEventListener("keydown", function (e) { if (e.key === "Enter") go("#/"); });
+  window.addEventListener("hashchange", route);
+  fetch("data/corpus.json").then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+    .then(function (d) {
+      // Benign decoys aren't a vulnerability, so they get no lesson. They still appear in the quiz.
+      DATA = d.filter(function (c) { return c.slug !== "benign"; });
+      route();
+    }).catch(fail);
+})();
+</script>
+</body>
+</html>

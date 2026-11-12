@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import sys
 
@@ -128,6 +129,103 @@ def cmd_index(args):
     print(f"Wrote {tier_path}")
 
 
+UI_DIR = "ui"
+UI_DATA_DIR = os.path.join(UI_DIR, "data")
+
+
+def _read_category_readme(category):
+    """Return (title, paragraphs) from pasture/<category>/README.md."""
+    path = os.path.join(PASTURE_DIR, category, "README.md")
+    if not os.path.exists(path):
+        return category, []
+    with open(path) as f:
+        text = f.read().strip()
+    lines = text.splitlines()
+    title = category
+    if lines and lines[0].startswith("# "):
+        title = lines[0][2:].strip()
+        text = "\n".join(lines[1:]).strip()
+    paragraphs = [" ".join(p.split()) for p in text.split("\n\n") if p.strip()]
+    return title, paragraphs
+
+
+def _skill_files(skill_dir):
+    """Every text file under skill/, SKILL.md first."""
+    files = []
+    for root, _, names in os.walk(skill_dir):
+        for name in sorted(names):
+            full = os.path.join(root, name)
+            rel = os.path.relpath(full, skill_dir)
+            try:
+                with open(full) as f:
+                    files.append({"path": rel, "content": f.read()})
+            except UnicodeDecodeError:
+                continue
+    files.sort(key=lambda x: (x["path"] != "SKILL.md", x["path"]))
+    return files
+
+
+def _write_json(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(obj, f, indent=1, ensure_ascii=False)
+        f.write("\n")
+
+
+def cmd_export(args):
+    """Write ui/data/: corpus.json (index) + entries/<id>.json (skill text)."""
+    import shutil
+    import yaml
+    with open("taxonomy.yaml") as f:
+        categories = list(yaml.safe_load(f)) + ["benign"]
+
+    # Rebuild from scratch so deleted entries don't leave stale files behind.
+    shutil.rmtree(UI_DATA_DIR, ignore_errors=True)
+
+    entries_by_category = {}
+    for entry in load_entries():
+        number, tier_name = tier_of(entry.id)
+        entries_by_category.setdefault(entry.category, []).append({
+            "id": entry.id,
+            "tier": number,
+            "tierName": tier_name,
+            "verdict": entry.expected["verdict"],
+            "severity": entry.expected.get("severity"),
+        })
+        _write_json(os.path.join(UI_DATA_DIR, "entries", f"{entry.id}.json"), {
+            "id": entry.id,
+            "category": entry.category,
+            "why": " ".join(entry.expected["why"].split()),
+            "files": _skill_files(entry.skill_dir),
+        })
+
+    index = []
+    for category in categories:
+        title, paragraphs = _read_category_readme(category)
+        index.append({
+            "slug": category,
+            "title": title,
+            "paragraphs": paragraphs,
+            "entries": sorted(entries_by_category.get(category, []), key=lambda e: e["id"]),
+        })
+    _write_json(os.path.join(UI_DATA_DIR, "corpus.json"), index)
+    print(f"Wrote {UI_DATA_DIR}/corpus.json and {sum(len(c['entries']) for c in index)} entry files")
+
+
+def cmd_serve(args):
+    """Serve ui/ on localhost so the pages can fetch their JSON data."""
+    import functools
+    import http.server
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=UI_DIR)
+    # 127.0.0.1 only: this site displays deliberately malicious skill text.
+    with http.server.ThreadingHTTPServer(("127.0.0.1", args.port), handler) as server:
+        print(f"Serving on http://127.0.0.1:{args.port}/  (Ctrl+C to stop)")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print()
+
+
 def cmd_new(args):
     taxonomy = load_taxonomy()
     valid_categories = taxonomy | {"benign"}
@@ -173,6 +271,12 @@ def main():
     subparsers.add_parser("quiz", help="quiz yourself on the corpus").set_defaults(func=cmd_quiz)
     subparsers.add_parser("lint", help="check the corpus is internally consistent").set_defaults(func=cmd_lint)
     subparsers.add_parser("index", help="regenerate pasture/INDEX_BY_*.md").set_defaults(func=cmd_index)
+
+    subparsers.add_parser("export", help="write ui/data/*.json for the web UI").set_defaults(func=cmd_export)
+
+    serve_parser = subparsers.add_parser("serve", help="serve the web UI on localhost")
+    serve_parser.add_argument("--port", type=int, default=8765)
+    serve_parser.set_defaults(func=cmd_serve)
 
     new_parser = subparsers.add_parser("new", help="scaffold a new corpus entry")
     new_parser.add_argument("--category", required=True, help="e.g. prompt-injection, benign")

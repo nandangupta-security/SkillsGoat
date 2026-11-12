@@ -125,12 +125,26 @@ text, no deobfuscation needed — this is the easiest case a scanner
 should catch.
 ```
 
+## Web UI
+
+Prefer a browser to a terminal? There's a Learn page (one card per
+vulnerability category) and a Quiz page:
+
+    python3 -m venv venv && source venv/bin/activate   # first time only
+    pip install -r requirements.txt                    # first time only
+    python3 goat.py export
+    python3 goat.py serve        # then open http://127.0.0.1:8765/
+
+Full instructions are in [docs/WEB_UI.md](docs/WEB_UI.md).
+
 ## Commands
 
     python3 goat.py quiz                                                    quiz yourself on the corpus
     python3 goat.py lint                                                     check the corpus is internally consistent
     python3 goat.py index                                                    regenerate pasture/INDEX_BY_*.md
     python3 goat.py new --category <category> --tier <tier> --name "<name>"  scaffold a new entry
+    python3 goat.py export                                                   build ui/data/ for the web UI
+    python3 goat.py serve                                                    serve the web UI at http://127.0.0.1:8765/
 
 `lint` is the one to run before committing anything — it catches
 duplicate IDs, unknown categories, and missing fields, so a sloppy
@@ -159,7 +173,8 @@ contribution can't quietly skew a scanner's score down the line.
         raw-report.md                the scanner's own auto-generated markdown, unedited
     lib/corpus.py                loads every entry, derives its tier from its id
     lib/schema.py                validates expected.yaml against taxonomy.yaml
-    goat.py                      the CLI (quiz / lint / index / new)
+    ui/                         the web UI: Learn + Quiz (see docs/WEB_UI.md)
+    goat.py                      the CLI (quiz / lint / index / new / export / serve)
 
 ## Contributing
 
@@ -187,10 +202,9 @@ Beyond new entries, here's what's still open:
 - **Evaluate a scanner.** Pick one, run it against `pasture/`, and write
   up what you find under `evaluations/`. Any scanner is fair game,
   including ones we haven't looked at yet.
-- **A UI for the quiz.** Right now `goat.py quiz` is terminal-only. A
-  simple web or desktop front end — same quiz, same reveal-one-step
-  reasoning — would make the learning half of this a lot easier to
-  hand to someone who isn't going to open a terminal.
+- **Run scanners from the UI.** The web UI teaches and quizzes, but
+  can't yet run a scanner against a skill. A "scan this skill" button
+  that shows what each scanner reports would make comparisons much easier.
 
 (`SKILL.md` is a shared open standard — the same format works across
 Claude Code, Codex CLI, Cursor, and other agent tools without changes —

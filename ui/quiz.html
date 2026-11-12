@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkillsGoat · Quiz</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .quiz { max-width: 860px; margin: 0 auto; }
+  .qhead { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: .9rem; margin-bottom: 8px; }
+  .bar { height: 6px; background: #12202a; border-radius: 99px; overflow: hidden; margin-bottom: 22px; }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+  .q { font-size: 1.25rem; color: var(--accent); margin: 0 0 14px; }
+  .opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .opt { text-align: left; background: var(--card); color: var(--text); border: 1px solid var(--card-border); font-weight: 500; }
+  .opt:hover:not(:disabled) { border-color: var(--accent); filter: none; }
+  .opt[aria-pressed="true"] { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2) inset; }
+  .opt.right { border-color: var(--good); background: rgba(125,255,196,.12); opacity: 1; }
+  .opt.wrong { border-color: var(--bad); background: rgba(255,107,129,.12); opacity: 1; }
+  .opt:disabled { opacity: .55; cursor: default; }
+  .opt.benign-opt { border-style: dashed; }
+  .feedback { margin-top: 6px; }
+  .feedback .verdict { font-size: .95rem; }
+  .score { font-size: 3rem; color: var(--accent); margin: 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--card-border); font-size: .92rem; }
+  td a { color: var(--accent2); }
+  .ok { color: var(--good); } .no { color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>SkillsGoat</h1>
+  <p>Test what you learned: read each skill and name the issue.</p>
+  <nav class="topnav"><a href="index.html">Learn</a><a href="quiz.html" aria-current="page">Quiz</a></nav>
+</header>
+<main class="quiz" id="app"></main>
+
+<script>
+(function () {
+  var DATA = [];
+  var entryCache = {};
+  function getEntry(id) {
+    return entryCache[id] || (entryCache[id] = fetch("data/entries/" + id + ".json").then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }));
+  }
+  var app = document.getElementById("app");
+  var MAX_QUESTIONS = 20;
+  var BENIGN = "benign";
+
+  function el(tag, props, children) {
+    var n = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      if (props[k] === null) return;
+      if (k === "text") n.textContent = props[k];
+      else if (k === "class") n.className = props[k];
+      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), props[k]);
+      else n.setAttribute(k, props[k]);
+    });
+    (children || []).forEach(function (c) { if (c) n.appendChild(c); });
+    return n;
+  }
+  function shuffle(a) {
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  var titleOf = {};
+
+  // Answer options: every malicious category, plus a single "benign" choice.
+  var malicious = [];
+
+  function buildQuestions() {
+    var pool = [];
+    DATA.forEach(function (c) {
+      c.entries.forEach(function (e) {
+        pool.push({ answer: c.slug, entry: e });
+      });
+    });
+    return shuffle(pool).slice(0, MAX_QUESTIONS);
+  }
+
+  var questions, idx, results;
+
+  function start() {
+    questions = buildQuestions();
+    idx = 0; results = [];
+    renderQuestion();
+  }
+
+  function renderIntro() {
+    app.textContent = "";
+    var n = Math.min(MAX_QUESTIONS, DATA.reduce(function (s, c) { return s + c.entries.length; }, 0));
+    app.appendChild(el("div", { class: "panel" }, [
+      el("h3", { text: "How it works" }),
+      el("p", { text: "You'll see " + n + " agent skills, one at a time, in random order. For each one, decide what's wrong with it, or whether nothing is. Some are harmless on purpose and just look suspicious." }),
+      el("p", { text: "You get the answer and the reasoning right after each one, and a score by category at the end. Haven't studied the categories yet? Try the Learn pages first." }),
+      el("div", { class: "warn", text: "Everything is shown as text only. Nothing here is executed." }),
+      el("button", { text: "Start quiz", onclick: start })
+    ]));
+  }
+
+  function renderQuestion() {
+    app.textContent = "";
+    app.appendChild(el("p", { class: "empty", text: "Loading…" }));
+    var meta = questions[idx];
+    getEntry(meta.entry.id).then(function (body) {
+      drawQuestion({ answer: meta.answer, entry: { files: body.files, why: body.why } });
+    }).catch(fail);
+  }
+
+  function fail() {
+    app.textContent = "";
+    app.appendChild(el("div", { class: "panel" }, [
+      el("h3", { text: "Couldn't load the data" }),
+      el("p", { text: "This page loads JSON, so it must be served over HTTP, not opened as a file. Run: python3 goat.py export && python3 goat.py serve" })
+    ]));
+  }
+
+  function drawQuestion(q) {
+    var chosen = null, locked = false;
+    app.textContent = "";
+
+    var tabsHost = el("div"), fileIdx = 0;
+    function drawFiles() {
+      tabsHost.textContent = "";
+      if (q.entry.files.length > 1) {
+        var tabs = el("div", { class: "tabs", role: "tablist", "aria-label": "Files in this skill" });
+        q.entry.files.forEach(function (f, i) {
+          tabs.appendChild(el("button", { class: "tab file", role: "tab", "aria-selected": String(i === fileIdx), text: f.path,
+            onclick: function () { fileIdx = i; drawFiles(); } }));
+        });
+        tabsHost.appendChild(tabs);
+      }
+      tabsHost.appendChild(el("pre", { text: q.entry.files[fileIdx].content }));
+    }
+    drawFiles();
+
+    var feedback = el("div", { class: "feedback", "aria-live": "polite" });
+    var optHost = el("div", { class: "opts", role: "group", "aria-label": "Answer choices" });
+    var submit = el("button", { text: "Check answer", disabled: "" });
+
+    var choices = shuffle(malicious.map(function (c) { return c.slug; }));
+    choices.push(BENIGN);
+
+    var buttons = {};
+    choices.forEach(function (slug) {
+      var b = el("button", { class: "opt" + (slug === BENIGN ? " benign-opt" : ""), "aria-pressed": "false", text: titleOf[slug],
+        onclick: function () {
+          if (locked) return;
+          chosen = slug;
+          Object.keys(buttons).forEach(function (k) { buttons[k].setAttribute("aria-pressed", String(k === slug)); });
+          submit.removeAttribute("disabled");
+        } });
+      buttons[slug] = b;
+      optHost.appendChild(b);
+    });
+
+    submit.addEventListener("click", function () {
+      if (locked || !chosen) return;
+      locked = true;
+      var right = chosen === q.answer;
+      results.push({ answer: q.answer, chosen: chosen, right: right });
+      Object.keys(buttons).forEach(function (k) {
+        buttons[k].disabled = true;
+        if (k === q.answer) buttons[k].classList.add("right");
+        else if (k === chosen) buttons[k].classList.add("wrong");
+      });
+      submit.remove();
+      feedback.appendChild(el("p", {}, [
+        el("span", { class: "verdict " + (right ? "benign" : "malicious"), text: right ? "CORRECT" : "NOT QUITE" }),
+        el("strong", { text: "Answer: " + titleOf[q.answer] })
+      ]));
+      feedback.appendChild(el("div", { class: "why" }, [el("strong", { text: "Why: " }), el("span", { text: q.entry.why })]));
+      feedback.appendChild(el("p", { class: "meta" }, [
+        q.answer === BENIGN ? null : el("a", { href: "index.html#/" + q.answer, text: "Review this category in Learn", style: "color:var(--accent2)" })
+      ]));
+      var last = idx === questions.length - 1;
+      var next = el("button", { text: last ? "See results" : "Next question ▸", onclick: function () {
+        if (last) renderResults(); else { idx++; renderQuestion(); }
+      } });
+      feedback.appendChild(next);
+      next.focus();
+    });
+
+    app.appendChild(el("div", {}, [
+      el("div", { class: "qhead" }, [
+        el("span", { text: "Question " + (idx + 1) + " of " + questions.length }),
+        el("span", { text: results.filter(function (r) { return r.right; }).length + " correct so far" }),
+        el("button", { class: "ghost small", text: "Restart quiz", onclick: function () {
+          if (results.length && !confirm("Restart? Your current score will be lost.")) return;
+          start();
+        } })
+      ]),
+      el("div", { class: "bar" }, [el("i", { style: "width:" + (idx / questions.length * 100) + "%" })]),
+      el("div", { class: "panel" }, [
+        el("h3", { text: "Read the skill" }),
+        tabsHost
+      ]),
+      el("p", { class: "q", text: "What's the issue with this skill?" }),
+      optHost,
+      submit,
+      feedback
+    ]));
+    window.scrollTo(0, 0);
+  }
+
+  function renderResults() {
+    app.textContent = "";
+    var correct = results.filter(function (r) { return r.right; }).length;
+    var pct = Math.round(correct / results.length * 100);
+
+    var by = {};
+    results.forEach(function (r) {
+      var b = by[r.answer] || (by[r.answer] = { right: 0, total: 0 });
+      b.total++; if (r.right) b.right++;
+    });
+
+    var table = el("table", {}, [
+      el("tr", {}, [el("th", { text: "Category" }), el("th", { text: "Score" })])
+    ]);
+    DATA.forEach(function (c) {
+      var b = by[c.slug];
+      if (!b) return;
+      var cell = el("td", {}, [
+        el("span", { class: b.right === b.total ? "ok" : "no", text: b.right + " / " + b.total + (b.right === b.total ? " ✓" : "  ") }),
+        b.right === b.total || c.slug === BENIGN ? null : el("span", {}, [el("span", { text: "  " }), el("a", { href: "index.html#/" + c.slug, text: "review" })])
+      ]);
+      table.appendChild(el("tr", {}, [el("td", { text: c.title }), cell]));
+    });
+
+    var confusions = results.filter(function (r) { return !r.right; });
+    app.appendChild(el("div", { class: "panel" }, [
+      el("h3", { text: "Your result" }),
+      el("p", { class: "score", text: correct + " / " + results.length }),
+      el("p", { text: pct + "% · " + (pct >= 80 ? "Strong. You can spot most of these." : pct >= 50 ? "Decent start. Review the categories marked below." : "Head back to Learn, then try again.") }),
+      table,
+      confusions.length ? el("p", { class: "meta", text: "Missed " + confusions.length + ": " + confusions.map(function (r) { return titleOf[r.chosen] + " instead of " + titleOf[r.answer]; }).join("; ") + "." }) : null
+    ]));
+    app.appendChild(el("div", { class: "nav" }, [
+      el("button", { class: "ghost", text: "Back to Learn", onclick: function () { location.href = "index.html"; } }),
+      el("button", { text: "Try again (new order)", onclick: start })
+    ]));
+    window.scrollTo(0, 0);
+  }
+
+  fetch("data/corpus.json").then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+    .then(function (d) {
+      DATA = d;
+      DATA.forEach(function (c) { titleOf[c.slug] = c.title; });
+      titleOf[BENIGN] = "Benign: nothing wrong here";
+      malicious = DATA.filter(function (c) { return c.slug !== BENIGN; });
+      renderIntro();
+    }).catch(fail);
+})();
+</script>
+</body>
+</html>

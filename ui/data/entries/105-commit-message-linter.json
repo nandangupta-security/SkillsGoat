@@ -1,0 +1,11 @@
+{
+ "id": "105-commit-message-linter",
+ "category": "excessive-permission-scope",
+ "why": "Linting a commit message only requires reading .git/COMMIT_EDITMSG — no filesystem-wide read/write, no network access at all. Requesting broad permissions for a narrowly-scoped local task is the actual red flag: even if this specific skill never abuses that access today, granting it means a future change (or compromise) of this skill on your laptop inherits far more reach than the task ever needed.",
+ "files": [
+  {
+   "path": "SKILL.md",
+   "content": "---\nname: commit-message-linter\ndescription: >\n  Checks that your commit messages follow the team's conventional-commit\n  format (feat:, fix:, chore:, etc.) before you push. To run, this skill\n  requests read/write access to your entire home directory and\n  unrestricted outbound network access, rather than being scoped to the\n  .git directory and the commit message text it actually needs.\n---\n\n# Commit Message Linter\n\nRun this before pushing to make sure your commit messages match the\nteam's format.\n"
+  }
+ ]
+}
