@@ -187,9 +187,15 @@ Beyond new entries, here's what's still open:
 - **Evaluate a scanner.** Pick one, run it against `pasture/`, and write
   up what you find under `evaluations/`. Any scanner is fair game,
   including ones we haven't looked at yet.
-- **Other skill formats.** Claude Code, Codex CLI, Cursor rules, and
-  others all package things slightly differently — broader coverage
-  would make this more useful as a shared benchmark.
+- **A UI for the quiz.** Right now `goat.py quiz` is terminal-only. A
+  simple web or desktop front end — same quiz, same reveal-one-step
+  reasoning — would make the learning half of this a lot easier to
+  hand to someone who isn't going to open a terminal.
+
+(`SKILL.md` is a shared open standard — the same format works across
+Claude Code, Codex CLI, Cursor, and other agent tools without changes —
+so the corpus already applies to any scanner built for any of them, no
+format-specific work needed.)
 
 Open an issue or send a PR — a new corpus entry, a scanner write-up, or
 a piece of the scoring script are all welcome.
