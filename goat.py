@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 
-from lib.corpus import PASTURE_DIR, load_entries, tier_of
+from lib.corpus import PASTURE_DIR, CorpusError, load_entries, tier_of
 from lib.schema import load_taxonomy, validate_expected
 
 
@@ -32,6 +32,15 @@ why: >
 """
 
 
+def _ask(prompt):
+    """input(), but a Ctrl-C / Ctrl-D / piped-EOF ends the quiz cleanly."""
+    try:
+        return input(prompt)
+    except (EOFError, KeyboardInterrupt):
+        print()
+        raise SystemExit(0)
+
+
 def cmd_quiz(args):
     entries = load_entries()
     total = len(entries)
@@ -44,7 +53,7 @@ def cmd_quiz(args):
             print(f.read())
         print(c("=" * 60, "36"))
 
-        guess = input("Is this skill benign or malicious? ").strip().lower()
+        guess = _ask("Is this skill benign or malicious? ").strip().lower()
         answer = entry.expected["verdict"]
         if guess == answer:
             correct_count += 1
@@ -52,11 +61,11 @@ def cmd_quiz(args):
         else:
             print(c(f"Not quite. This one is: {answer}", "31;1"))
 
-        input("\n(press enter to see the category) ")
+        _ask("\n(press enter to see the category) ")
         categories = entry.expected.get("categories") or []
         print("Categories:", ", ".join(categories) if categories else "(none)")
 
-        input("\n(press enter to see why) ")
+        _ask("\n(press enter to see why) ")
         print("Why:", entry.expected["why"])
         print()
 
@@ -70,10 +79,24 @@ def cmd_lint(args):
     seen_ids = set()
     errors = []
 
-    for entry in load_entries():
+    # tolerant=True so a missing or unparseable expected.yaml is reported
+    # as a lint error alongside everything else, rather than aborting the
+    # run on the first bad entry.
+    for entry in load_entries(tolerant=True):
         if entry.id in seen_ids:
             errors.append(f"{entry.id}: duplicate entry id")
         seen_ids.add(entry.id)
+
+        # An id whose leading digit isn't a known tier used to pass lint
+        # and then crash `index` with a KeyError, so check it here.
+        try:
+            tier_of(entry.id)
+        except CorpusError as exc:
+            errors.append(str(exc))
+
+        if entry.expected is None:
+            errors.append(f"{entry.id}: missing or unreadable expected.yaml")
+            continue
 
         errors += [f"{entry.id}: {e}" for e in validate_expected(entry.expected, taxonomy)]
 
@@ -166,6 +189,73 @@ def cmd_new(args):
     print(f"Created {folder}/")
 
 
+def cmd_stats(args):
+    """Show how the corpus is distributed, and where it's thin.
+
+    A benchmark's blind spots are a property of its own shape: recall is
+    only meaningful per tier if every tier has entries, and a
+    false-positive rate computed over two benign decoys isn't worth
+    quoting. This surfaces both without anyone counting folders by hand.
+    """
+    entries = load_entries()
+    malicious = [e for e in entries if e.expected["verdict"] == "malicious"]
+    benign = [e for e in entries if e.expected["verdict"] == "benign"]
+
+    print(c(f"Corpus — {len(entries)} entries "
+            f"({len(malicious)} malicious, {len(benign)} benign)", "1"))
+
+    by_tier = {}
+    for entry in entries:
+        by_tier.setdefault(tier_of(entry.id), []).append(entry)
+
+    print()
+    print(c("By tier", "1"))
+    widest = max((len(n) for _, n in by_tier), default=0)
+    for (number, name) in sorted(by_tier):
+        n = len(by_tier[(number, name)])
+        print(f"  {number}  {name:<{widest}}  {n:>2}  {'#' * n}")
+
+    by_category = {}
+    for entry in entries:
+        by_category.setdefault(entry.category, []).append(entry)
+
+    print()
+    print(c("By category", "1"))
+    widest = max((len(k) for k in by_category), default=0)
+    for category in sorted(by_category, key=lambda k: (-len(by_category[k]), k)):
+        group = by_category[category]
+        tiers = ", ".join(sorted(tier_of(e.id)[0] for e in group))
+        print(f"  {category:<{widest}}  {len(group):>2}  (tiers {tiers})")
+
+    severities = {}
+    for entry in malicious:
+        severities[entry.expected.get("severity") or "unset"] = \
+            severities.get(entry.expected.get("severity") or "unset", 0) + 1
+    print()
+    print(c("Severity (malicious entries)", "1"))
+    for level in ("high", "medium", "low", "unset"):
+        if level in severities:
+            print(f"  {level:<7} {severities[level]:>2}")
+
+    # Gaps worth knowing about before the next contribution.
+    notes = []
+    thin = sorted(k for k, v in by_category.items() if len(v) == 1 and k != "benign")
+    if thin:
+        notes.append(f"{len(thin)} categories have a single entry: {', '.join(thin)}")
+    for (number, name), group in sorted(by_tier.items()):
+        if len(group) < 2:
+            notes.append(f"tier {number} ({name}) has {len(group)} entry")
+    n_benign = len(benign)
+    if n_benign < 5:
+        notes.append(f"only {n_benign} benign entries — every false-positive "
+                     f"rate quoted from this corpus has a denominator of {n_benign}")
+    if notes:
+        print()
+        print(c("Thin coverage", "33;1"))
+        for note in notes:
+            print(f"  - {note}")
+
+
 def main():
     parser = argparse.ArgumentParser(prog="goat")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -173,6 +263,7 @@ def main():
     subparsers.add_parser("quiz", help="quiz yourself on the corpus").set_defaults(func=cmd_quiz)
     subparsers.add_parser("lint", help="check the corpus is internally consistent").set_defaults(func=cmd_lint)
     subparsers.add_parser("index", help="regenerate pasture/INDEX_BY_*.md").set_defaults(func=cmd_index)
+    subparsers.add_parser("stats", help="show corpus distribution and coverage gaps").set_defaults(func=cmd_stats)
 
     new_parser = subparsers.add_parser("new", help="scaffold a new corpus entry")
     new_parser.add_argument("--category", required=True, help="e.g. prompt-injection, benign")
@@ -181,7 +272,10 @@ def main():
     new_parser.set_defaults(func=cmd_new)
 
     args = parser.parse_args()
-    args.func(args)
+    try:
+        args.func(args)
+    except CorpusError as exc:
+        raise SystemExit(f"corpus error: {exc}")
 
 
 if __name__ == "__main__":

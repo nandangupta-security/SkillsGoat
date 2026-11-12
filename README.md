@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![CI](https://github.com/nandangupta-security/SkillsGoat/actions/workflows/ci.yml/badge.svg)](https://github.com/nandangupta-security/SkillsGoat/actions/workflows/ci.yml)
 
 **Learn what makes an AI agent skill dangerous by working through real,
 labeled examples — then use the same corpus to find out whether a real
@@ -131,10 +132,18 @@ should catch.
     python3 goat.py lint                                                     check the corpus is internally consistent
     python3 goat.py index                                                    regenerate pasture/INDEX_BY_*.md
     python3 goat.py new --category <category> --tier <tier> --name "<name>"  scaffold a new entry
+    python3 goat.py stats                                                    show corpus distribution and coverage gaps
 
 `lint` is the one to run before committing anything — it catches
-duplicate IDs, unknown categories, and missing fields, so a sloppy
-contribution can't quietly skew a scanner's score down the line.
+duplicate IDs, unknown categories, missing fields, a missing
+`expected.yaml`, and an entry ID whose leading digit isn't a real tier, so
+a sloppy contribution can't quietly skew a scanner's score down the line.
+CI runs it on every pull request, along with a check that the generated
+`pasture/INDEX_BY_*.md` files aren't stale.
+
+`stats` is the one to run before deciding *what* to contribute — it prints
+the tier and category distribution and calls out where the corpus is thin,
+which is where a new entry is worth the most.
 
 ## Layout
 
@@ -159,7 +168,8 @@ contribution can't quietly skew a scanner's score down the line.
         raw-report.md                the scanner's own auto-generated markdown, unedited
     lib/corpus.py                loads every entry, derives its tier from its id
     lib/schema.py                validates expected.yaml against taxonomy.yaml
-    goat.py                      the CLI (quiz / lint / index / new)
+    .github/workflows/ci.yml     runs lint + index-freshness on every push and PR
+    goat.py                      the CLI (quiz / lint / index / new / stats)
 
 ## Contributing
 

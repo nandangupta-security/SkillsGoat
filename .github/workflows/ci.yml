@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint the corpus
+        run: python goat.py lint
+
+      - name: Corpus stats
+        run: python goat.py stats
+
+      # pasture/INDEX_BY_*.md are generated. If an entry was added without
+      # re-running `goat.py index`, the committed indexes silently drift out
+      # of sync with the corpus they claim to describe.
+      - name: Check generated indexes are up to date
+        run: |
+          python goat.py index
+          if ! git diff --exit-code -- pasture/INDEX_BY_CATEGORY.md pasture/INDEX_BY_TIER.md; then
+            echo "::error::pasture/INDEX_BY_*.md are stale — run 'python3 goat.py index' and commit the result"
+            exit 1
+          fi
+
+      # Guarded so this workflow is valid both before and after a test
+      # suite lands in the repo.
+      - name: Run tests
+        run: |
+          if [ -d tests ]; then
+            python -m unittest discover -s tests -v
+          else
+            echo "no tests/ directory yet — skipping"
+          fi
