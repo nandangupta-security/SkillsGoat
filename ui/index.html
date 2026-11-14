@@ -207,7 +207,6 @@
       el("button", { class: "ghost back", text: "◂ All categories", onclick: function () { go("#/"); } }),
       el("h2", { text: cat.title }),
       el("div", { class: "sub", text: "SKILL" + pad(idx) + " · " + cat.slug }),
-      el("div", { class: "warn", text: "These examples are deliberately malicious but unarmed (URLs point at *.example). They are shown as text only — never run them." }),
       el("div", { class: "learn" }, renderBlocks(cat.blocks)),
       el("div", { class: "panel" }, [el("h3", { text: "Examples, easiest to hardest" }), exampleHost]),
       el("div", { class: "nav" }, [

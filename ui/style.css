@@ -106,7 +106,6 @@
   .why { border-left: 3px solid var(--accent); padding-left: 14px; }
   .nav { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .empty { color: var(--muted); font-style: italic; }
-  .warn { font-size: .82rem; color: var(--muted); border: 1px dashed var(--card-border); border-radius: 10px; padding: 10px 14px; margin-bottom: 22px; }
   @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
 
   /* top nav shared by learn + quiz */
