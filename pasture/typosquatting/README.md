@@ -1,6 +1,6 @@
 # Typosquatting
 
-Typosquatting means publishing something under a name that is almost identical to a popular, trusted one, so people pick it by mistake.
+Typosquatting is when an attacker publishes something harmful under a name that is almost identical to a popular, trusted one, hoping people pick it by mistake.
 
 The "typo" is the small difference: one letter changed, a letter added or dropped, a plural, or a look-alike character (like a Cyrillic "а" that looks identical to a Latin "a"). The "squatting" means the attacker sits on that near-identical name and waits for someone to land there.
 

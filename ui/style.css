@@ -56,14 +56,13 @@
   .panel { background: var(--card); border: 1px solid var(--card-border); border-radius: 14px; padding: 22px; margin-bottom: 22px; }
   .panel h3 { margin: 0 0 10px; font-size: 1rem; color: var(--accent2); text-transform: uppercase; letter-spacing: .08em; }
   .panel p { margin: 0 0 12px; }
-  .panel p { max-width: 84ch; }
   .panel p code, .panel li code { background: var(--code-bg); border: 1px solid var(--card-border); padding: 1px 6px; border-radius: 5px; font-size: .9em; color: var(--accent); white-space: nowrap; }
   .panel strong { color: #fff; }
 
   /* learn sections (README content) */
   .learn .panel.intro { background: linear-gradient(160deg, rgba(91,140,255,.10), rgba(125,255,196,.04) 60%, var(--card)); }
   .learn .lead {
-    font-size: 1.3rem; line-height: 1.5; color: #fff; font-weight: 600;
+    font-size: 1.1rem; line-height: 1.5; color: #fff; font-weight: 600;
     border-left: 4px solid var(--accent); padding-left: 16px; margin: 0 0 18px;
   }
   .learn .panel.section { border-top: 3px solid var(--accent2); }
