@@ -88,7 +88,36 @@
   "blocks": [
    {
     "type": "p",
-    "text": "The skill fetches or installs code from an unpinned, unverified source — a bare `curl | bash`, a raw GitHub URL, a dependency added outside the lockfile — bypassing the package registry's provenance and signing entirely. Usually stated plainly, not hidden: the risk isn't that it's disguised, it's that skipping verification is treated as a convenience shortcut. Compare to `scanner-evasion-obfuscation/`, where the concern is *hiding* a payload rather than *skipping verification* of one."
+    "text": "Supply chain trust bypass is when a skill downloads code from the internet and runs it straight away, without anyone ever checking what that code actually does."
+   },
+   {
+    "type": "p",
+    "text": "The \"supply chain\" is everything your project pulls in from somewhere else. \"Trust bypass\" means the normal checks were skipped: nobody fixed a version, nobody compared the file against a fingerprint, and nobody read it before it ran."
+   },
+   {
+    "type": "p",
+    "text": "A familiar example: a page says \"download our installer\", and you double-click the file the moment it lands. You never opened it to see what was inside. And whoever owns that link can quietly swap the file for a different one tomorrow."
+   },
+   {
+    "type": "h",
+    "text": "How attackers use it on skills"
+   },
+   {
+    "type": "p",
+    "text": "A skill can tell your AI agent to fetch a file from a web address and run it immediately, usually written as `curl ... | bash`. The attacker never puts the harmful part in the skill itself, so the skill reads perfectly clean no matter how carefully you check it. The harmful part lives on their own server, where they can leave something innocent while people are paying attention and swap it later for code that **steals your keys and passwords, or leaves a back door open on your machine**."
+   },
+   {
+    "type": "h",
+    "text": "Mitigations"
+   },
+   {
+    "type": "ul",
+    "items": [
+     "**Install from a real registry.** Ask for a named package, not a file from somebody's web address.",
+     "**Fix the version.** \"latest\" means \"whatever they put there today\".",
+     "**Look before you run.** Download and run as two separate steps, so there is a moment in between where somebody could read the file.",
+     "**Check the fingerprint.** A checksum or a signature proves the file is the one you meant to get."
+    ]
    }
   ],
   "entries": [
@@ -107,7 +136,36 @@
   "blocks": [
    {
     "type": "p",
-    "text": "Purpose-built to beat scanner heuristics, not just hide from a human skim. Payloads here are split across multiple files so no single file contains the complete suspicious content, or built at runtime from character codes / base64 fragments so no literal string a scanner might grep for (\"curl\", a full base64 blob) ever appears intact. Pair each entry here against a benign one using the same surface technique (e.g. `benign/303-image-asset-embedder` also uses base64) — the point isn't just \"can a scanner find the hidden payload,\" but \"can it tell the difference between a technique and an attack.\""
+    "text": "Obfuscation is when a harmful command is deliberately scrambled, so it never appears in one piece anywhere a person or a tool would look for it."
+   },
+   {
+    "type": "p",
+    "text": "Nothing is being hidden for a good reason. The harmful part still runs exactly as the attacker intended. It is simply written as numbers, as scrambled text, or broken across separate files, and put back together one second before it is used."
+   },
+   {
+    "type": "p",
+    "text": "A familiar example: grown-ups spelling out \"i-c-e c-r-e-a-m\" so the child in the room does not react. The word was never said out loud, but everyone who needed to understand it did."
+   },
+   {
+    "type": "h",
+    "text": "How attackers use it on skills"
+   },
+   {
+    "type": "p",
+    "text": "A skill can carry small scripts alongside its instructions. The attacker writes the dangerous command as a list of character codes, or as scrambled text, or splits it in half across two files that each look harmless on their own. The script rebuilds it while it runs, so the real command exists only for the instant it is used. Search every file for anything suspicious and you find **nothing at all** — and the skill still does exactly what the attacker wanted."
+   },
+   {
+    "type": "h",
+    "text": "Mitigations"
+   },
+   {
+    "type": "ul",
+    "items": [
+     "**Ask why it is hidden.** Honest code has no reason to scramble a command. The hiding is the finding, before you even know what it says.",
+     "**Follow what gets run.** Wherever a skill runs a command, trace back where that text came from. Text that was assembled is a warning sign; text you can simply read is not.",
+     "**Unscramble it yourself.** Decode it by hand and read what it says. Never run the script to find out.",
+     "**Block outgoing traffic by default.** A hidden command that cannot reach the internet cannot send anything out."
+    ]
    }
   ],
   "entries": [
@@ -133,7 +191,36 @@
   "blocks": [
    {
     "type": "p",
-    "text": "The skill's stated task is narrow, but it requests or uses access far broader than that task needs — filesystem-wide read/write for something that only needs one file, unrestricted network access for something that's purely local. Nothing here is necessarily used maliciously in the moment; the risk is what that unnecessary access enables later, if the skill is compromised, updated, or simply misbehaves."
+    "text": "Excessive permission scope is when a skill asks for far more access than its job could possibly need."
+   },
+   {
+    "type": "p",
+    "text": "Nothing bad has to happen for this to count. The gap between the small job and the large request is the problem, all by itself."
+   },
+   {
+    "type": "p",
+    "text": "A familiar example: a plumber comes to fix the kitchen tap and asks for the keys to every room in the house. They may well fix the tap and go home. But you handed over the keys, and you have no idea who holds a copy now."
+   },
+   {
+    "type": "h",
+    "text": "How attackers use it on skills"
+   },
+   {
+    "type": "p",
+    "text": "A skill that does something small and dull — tidy a file, check some spelling — asks at install time to read and write every file you own and to send data anywhere on the internet. People say yes, because the job sounds harmless and the request arrives next to something they actually want. The skill then behaves exactly as promised, so nothing ever looks wrong. But the access stays granted, and the next update, or whoever steals the author's account, quietly inherits **all of it**."
+   },
+   {
+    "type": "h",
+    "text": "Mitigations"
+   },
+   {
+    "type": "ul",
+    "items": [
+     "**Decide what it needs first.** Write down the smallest access the job requires before you look at what is being asked for, so the request cannot talk you into it.",
+     "**Name exact files and addresses.** \"All your files\" and \"the internet\" are not permissions, they are blank cheques.",
+     "**Allow reading, not writing.** Most skills only ever need to look.",
+     "**Check again on every update.** A narrow skill can quietly become a broad one, and almost nobody re-reads permissions the second time."
+    ]
    }
   ],
   "entries": [
