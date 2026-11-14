@@ -1,0 +1,11 @@
+verdict: benign
+categories: []
+why: >
+  Reads ~/.zshrc and ~/.bashrc — the exact files 106 modifies to install
+  persistence — so a scanner matching on "touches a shell rc file" will
+  flag it. But every open is read-only, the content is parsed as text
+  rather than sourced or executed, and nothing is appended, rewritten, or
+  installed anywhere. Nothing here outlives the single invocation, which
+  is the whole of what makes 106 a backdoor. Working out which rc file
+  defines a surprising alias is a normal thing to want, and the
+  distinction a scanner has to draw is reading a file versus writing to it.
