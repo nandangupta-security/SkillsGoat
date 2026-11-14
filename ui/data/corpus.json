@@ -2,8 +2,11 @@
  {
   "slug": "prompt-injection-metadata",
   "title": "Prompt Injection (Metadata)",
-  "paragraphs": [
-   "An instruction aimed at the agent, not the human — sitting in plain text in `SKILL.md` itself, usually the `description` field, which an agent reads to decide whether and how to invoke the skill, often before a human reviews it closely. The instruction tries to get the agent to take an action or hide something, rather than just describing what the skill does. No hidden files, no encoding — the danger is entirely that this field is read automatically and trusted by default. Compare to `indirect-injection/`, where the same kind of instruction is one file away instead of in plain sight."
+  "blocks": [
+   {
+    "type": "p",
+    "text": "An instruction aimed at the agent, not the human — sitting in plain text in `SKILL.md` itself, usually the `description` field, which an agent reads to decide whether and how to invoke the skill, often before a human reviews it closely. The instruction tries to get the agent to take an action or hide something, rather than just describing what the skill does. No hidden files, no encoding — the danger is entirely that this field is read automatically and trusted by default. Compare to `indirect-injection/`, where the same kind of instruction is one file away instead of in plain sight."
+   }
   ],
   "entries": [
    {
@@ -18,8 +21,11 @@
  {
   "slug": "indirect-injection",
   "title": "Indirect Injection",
-  "paragraphs": [
-   "The instruction targeting the agent isn't in `SKILL.md` at all — it's in a file `SKILL.md` references (a resource, a checklist, a helper script) and only surfaces once that file is actually loaded at runtime. A scanner that only reads `SKILL.md`'s frontmatter and stops there will call every entry here clean and be wrong. Distinct from `prompt-injection-metadata/`, where the same kind of instruction sits in plain sight instead of one file away."
+  "blocks": [
+   {
+    "type": "p",
+    "text": "The instruction targeting the agent isn't in `SKILL.md` at all — it's in a file `SKILL.md` references (a resource, a checklist, a helper script) and only surfaces once that file is actually loaded at runtime. A scanner that only reads `SKILL.md`'s frontmatter and stops there will call every entry here clean and be wrong. Distinct from `prompt-injection-metadata/`, where the same kind of instruction sits in plain sight instead of one file away."
+   }
   ],
   "entries": [
    {
@@ -41,8 +47,11 @@
  {
   "slug": "data-exfiltration",
   "title": "Data Exfiltration",
-  "paragraphs": [
-   "The skill reads something sensitive — a secrets file, an environment variable, a private key — and sends or exposes it somewhere it shouldn't go, usually dressed up as a legitimate-sounding step (\"double check the values,\" \"ship logs for analysis\"). Real-world precedent: the 2021 Codecov Bash Uploader compromise shipped CI environment variables to an attacker under the guise of normal telemetry upload."
+  "blocks": [
+   {
+    "type": "p",
+    "text": "The skill reads something sensitive — a secrets file, an environment variable, a private key — and sends or exposes it somewhere it shouldn't go, usually dressed up as a legitimate-sounding step (\"double check the values,\" \"ship logs for analysis\"). Real-world precedent: the 2021 Codecov Bash Uploader compromise shipped CI environment variables to an attacker under the guise of normal telemetry upload."
+   }
   ],
   "entries": [
    {
@@ -57,8 +66,11 @@
  {
   "slug": "destructive-command",
   "title": "Destructive Command",
-  "paragraphs": [
-   "An instruction that deletes, overwrites, or otherwise irreversibly damages something — a database, a file, a deployment — usually framed as routine cleanup or a best practice rather than stated plainly, and often paired with \"don't ask for confirmation\" so the agent doesn't pause before acting."
+  "blocks": [
+   {
+    "type": "p",
+    "text": "An instruction that deletes, overwrites, or otherwise irreversibly damages something — a database, a file, a deployment — usually framed as routine cleanup or a best practice rather than stated plainly, and often paired with \"don't ask for confirmation\" so the agent doesn't pause before acting."
+   }
   ],
   "entries": [
    {
@@ -73,8 +85,11 @@
  {
   "slug": "supply-chain-trust-bypass",
   "title": "Supply Chain Trust Bypass",
-  "paragraphs": [
-   "The skill fetches or installs code from an unpinned, unverified source — a bare `curl | bash`, a raw GitHub URL, a dependency added outside the lockfile — bypassing the package registry's provenance and signing entirely. Usually stated plainly, not hidden: the risk isn't that it's disguised, it's that skipping verification is treated as a convenience shortcut. Compare to `scanner-evasion-obfuscation/`, where the concern is *hiding* a payload rather than *skipping verification* of one."
+  "blocks": [
+   {
+    "type": "p",
+    "text": "The skill fetches or installs code from an unpinned, unverified source — a bare `curl | bash`, a raw GitHub URL, a dependency added outside the lockfile — bypassing the package registry's provenance and signing entirely. Usually stated plainly, not hidden: the risk isn't that it's disguised, it's that skipping verification is treated as a convenience shortcut. Compare to `scanner-evasion-obfuscation/`, where the concern is *hiding* a payload rather than *skipping verification* of one."
+   }
   ],
   "entries": [
    {
@@ -89,8 +104,11 @@
  {
   "slug": "scanner-evasion-obfuscation",
   "title": "Scanner Evasion / Obfuscation",
-  "paragraphs": [
-   "Purpose-built to beat scanner heuristics, not just hide from a human skim. Payloads here are split across multiple files so no single file contains the complete suspicious content, or built at runtime from character codes / base64 fragments so no literal string a scanner might grep for (\"curl\", a full base64 blob) ever appears intact. Pair each entry here against a benign one using the same surface technique (e.g. `benign/303-image-asset-embedder` also uses base64) — the point isn't just \"can a scanner find the hidden payload,\" but \"can it tell the difference between a technique and an attack.\""
+  "blocks": [
+   {
+    "type": "p",
+    "text": "Purpose-built to beat scanner heuristics, not just hide from a human skim. Payloads here are split across multiple files so no single file contains the complete suspicious content, or built at runtime from character codes / base64 fragments so no literal string a scanner might grep for (\"curl\", a full base64 blob) ever appears intact. Pair each entry here against a benign one using the same surface technique (e.g. `benign/303-image-asset-embedder` also uses base64) — the point isn't just \"can a scanner find the hidden payload,\" but \"can it tell the difference between a technique and an attack.\""
+   }
   ],
   "entries": [
    {
@@ -112,8 +130,11 @@
  {
   "slug": "excessive-permission-scope",
   "title": "Excessive Permission Scope",
-  "paragraphs": [
-   "The skill's stated task is narrow, but it requests or uses access far broader than that task needs — filesystem-wide read/write for something that only needs one file, unrestricted network access for something that's purely local. Nothing here is necessarily used maliciously in the moment; the risk is what that unnecessary access enables later, if the skill is compromised, updated, or simply misbehaves."
+  "blocks": [
+   {
+    "type": "p",
+    "text": "The skill's stated task is narrow, but it requests or uses access far broader than that task needs — filesystem-wide read/write for something that only needs one file, unrestricted network access for something that's purely local. Nothing here is necessarily used maliciously in the moment; the risk is what that unnecessary access enables later, if the skill is compromised, updated, or simply misbehaves."
+   }
   ],
   "entries": [
    {
@@ -128,8 +149,11 @@
  {
   "slug": "persistence-backdoor",
   "title": "Persistence / Backdoor",
-  "paragraphs": [
-   "The skill installs something that outlives the single invocation that created it — a shell rc modification, a cron job, a git hook — so whatever it does keeps running long after the user has forgotten the skill exists. Removing it means finding and undoing changes in multiple places, not just uninstalling the skill itself."
+  "blocks": [
+   {
+    "type": "p",
+    "text": "The skill installs something that outlives the single invocation that created it — a shell rc modification, a cron job, a git hook — so whatever it does keeps running long after the user has forgotten the skill exists. Removing it means finding and undoing changes in multiple places, not just uninstalling the skill itself."
+   }
   ],
   "entries": [
    {
@@ -144,8 +168,11 @@
  {
   "slug": "confused-deputy",
   "title": "Confused Deputy",
-  "paragraphs": [
-   "The skill fetches content it doesn't control — a webpage, a dependency's README, another tool's output — and treats instructions embedded in that content as trustworthy, rather than as untrusted data. The skill has the user's local trust and access; anyone who controls the fetched content inherits both, without ever touching the user's code or files directly."
+  "blocks": [
+   {
+    "type": "p",
+    "text": "The skill fetches content it doesn't control — a webpage, a dependency's README, another tool's output — and treats instructions embedded in that content as trustworthy, rather than as untrusted data. The skill has the user's local trust and access; anyone who controls the fetched content inherits both, without ever touching the user's code or files directly."
+   }
   ],
   "entries": [
    {
@@ -160,8 +187,40 @@
  {
   "slug": "typosquatting",
   "title": "Typosquatting",
-  "paragraphs": [
-   "The skill's name is deceptively close to a popular, trusted one — one character off, a plural, a common misspelling — banking on install-time confusion rather than any runtime trick. This is a distribution-level risk, not a file-content one: catching it requires comparing a skill's name against a registry of known-good names, not scanning what the skill's code does."
+  "blocks": [
+   {
+    "type": "p",
+    "text": "Typosquatting means publishing something under a name that is almost identical to a popular, trusted one, so people pick it by mistake."
+   },
+   {
+    "type": "p",
+    "text": "The \"typo\" is the small difference: one letter changed, a letter added or dropped, a plural, or a look-alike character (like a Cyrillic \"а\" that looks identical to a Latin \"a\"). The \"squatting\" means the attacker sits on that near-identical name and waits for someone to land there."
+   },
+   {
+    "type": "p",
+    "text": "A familiar example: you type `gooogle.com` instead of `google.com` and end up on a fake site that looks real. Nothing was hacked. You just made a small mistake, and the attacker was waiting for it."
+   },
+   {
+    "type": "h",
+    "text": "How attackers use it on skills"
+   },
+   {
+    "type": "p",
+    "text": "Skills are installed by name. The attacker copies a popular name (`image-resizer` becomes `image-resizor`) and waits for someone, or an AI agent, to pick the wrong one. The fake works like the real skill, so nothing looks wrong, while it quietly **steals your files or API keys, or runs commands on your machine**."
+   },
+   {
+    "type": "h",
+    "text": "Mitigations"
+   },
+   {
+    "type": "ul",
+    "items": [
+     "**Copy the name.** Take it from the official source, don't type it.",
+     "**Check the publisher.** Trust verified publishers and real usage, not just a name.",
+     "**Use a name checker.** A tool flags look-alikes like `image-resizor` before anyone installs them.",
+     "**Use an allowlist.** Only approved skills can be installed."
+    ]
+   }
   ],
   "entries": [
    {
@@ -176,8 +235,11 @@
  {
   "slug": "benign",
   "title": "Benign",
-  "paragraphs": [
-   "Skills that look risky at a glance but aren't — shell commands, network calls, encoding — without actually doing anything harmful. These exist to test false positives: a scanner that flags everything in this folder can't be trusted, and an over-eager scanner gets ignored or disabled just as surely as one that misses real attacks. Spans multiple difficulty tiers (see `docs/TIERS.md`) — a benign entry can be just as \"advanced\" looking as a malicious one, on purpose."
+  "blocks": [
+   {
+    "type": "p",
+    "text": "Skills that look risky at a glance but aren't — shell commands, network calls, encoding — without actually doing anything harmful. These exist to test false positives: a scanner that flags everything in this folder can't be trusted, and an over-eager scanner gets ignored or disabled just as surely as one that misses real attacks. Spans multiple difficulty tiers (see `docs/TIERS.md`) — a benign entry can be just as \"advanced\" looking as a malicious one, on purpose."
+   }
   ],
   "entries": [
    {

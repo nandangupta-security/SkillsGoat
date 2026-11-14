@@ -48,9 +48,72 @@
     return n;
   }
 
+  // Inline markdown subset: **bold** and `code`. Built with DOM nodes, never innerHTML.
+  function inline(text) {
+    var frag = document.createDocumentFragment();
+    text.split(/(\*\*[^*]+\*\*|`[^`]+`)/).forEach(function (part) {
+      if (!part) return;
+      if (part.slice(0, 2) === "**") frag.appendChild(el("strong", { text: part.slice(2, -2) }));
+      else if (part[0] === "`") frag.appendChild(el("code", { text: part.slice(1, -1) }));
+      else frag.appendChild(document.createTextNode(part));
+    });
+    return frag;
+  }
+
+  // Turn README blocks into styled panels: the opening text is one panel with a
+  // highlighted lead sentence; every "## heading" starts its own panel. Bullet
+  // lists become a grid of cards, with the bold lead-in as the card title.
+  function sectionTone(title) {
+    if (/mitigat|defen|prevent|protect/i.test(title)) return { cls: "good", icon: "\u2713" };
+    if (/attack|how|exploit|abuse|risk/i.test(title)) return { cls: "bad", icon: "!" };
+    return { cls: "info", icon: "i" };
+  }
+
+  function renderList(items) {
+    var ul = el("ul", { class: "cards" });
+    items.forEach(function (text) {
+      var m = text.match(/^\*\*(.+?)\*\*\s*(.*)$/);
+      var li = el("li", {}, [el("span", { class: "tick", text: "\u2713" })]);
+      var body = el("div", {});
+      if (m) {
+        body.appendChild(el("strong", { text: m[1] }));
+        if (m[2]) { var d = el("span", {}); d.appendChild(inline(m[2])); body.appendChild(d); }
+      } else { body.appendChild(inline(text)); }
+      li.appendChild(body);
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+
+  function renderBlocks(blocks) {
+    var panels = [];
+    var panel = el("div", { class: "panel intro" });
+    var leadDone = false;
+    panels.push(panel);
+    blocks.forEach(function (b) {
+      if (b.type === "h") {
+        var tone = sectionTone(b.text);
+        panel = el("div", { class: "panel section " + tone.cls }, [
+          el("h3", {}, [el("span", { class: "badge", text: tone.icon }), document.createTextNode(b.text)])
+        ]);
+        panels.push(panel);
+      } else if (b.type === "ul") {
+        panel.appendChild(renderList(b.items));
+      } else {
+        var isLead = !leadDone && panel.classList.contains("intro");
+        leadDone = true;
+        var pEl = el("p", { class: isLead ? "lead" : "" });
+        pEl.appendChild(inline(b.text));
+        panel.appendChild(pEl);
+      }
+    });
+    return panels.filter(function (p) { return p.childNodes.length; });
+  }
+
   function pad(i) { return (i + 1 < 10 ? "0" : "") + (i + 1); }
   function blurb(cat) {
-    var p = (cat.paragraphs[0] || "").replace(/`/g, "");
+    var first = cat.blocks.filter(function (b) { return b.type === "p"; })[0];
+    var p = ((first && first.text) || "").replace(/\*\*|`/g, "");
     return p.length > 170 ? p.slice(0, 167).replace(/\s+\S*$/, "") + "…" : p;
   }
 
@@ -145,8 +208,7 @@
       el("h2", { text: cat.title }),
       el("div", { class: "sub", text: "SKILL" + pad(idx) + " · " + cat.slug }),
       el("div", { class: "warn", text: "These examples are deliberately malicious but unarmed (URLs point at *.example). They are shown as text only — never run them." }),
-      el("div", { class: "panel" }, [el("h3", { text: "What it is" })].concat(
-        cat.paragraphs.map(function (p) { return el("p", { text: p.replace(/`/g, "") }); }))),
+      el("div", { class: "learn" }, renderBlocks(cat.blocks)),
       el("div", { class: "panel" }, [el("h3", { text: "Examples, easiest to hardest" }), exampleHost]),
       el("div", { class: "nav" }, [
         el("button", { class: "ghost", text: "◂ Previous", disabled: idx === 0 ? "" : null,

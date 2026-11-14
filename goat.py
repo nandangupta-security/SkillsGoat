@@ -133,8 +133,45 @@ UI_DIR = "ui"
 UI_DATA_DIR = os.path.join(UI_DIR, "data")
 
 
+def _parse_blocks(text):
+    """Tiny markdown subset -> [{"type": "p"|"h"|"ul", ...}].
+
+    Supports "## " headings, "- " bullet lists and plain paragraphs. Inline
+    **bold** and `code` are left in the text for the UI to render.
+    """
+    blocks = []
+    para = []   # lines of the paragraph being built
+    items = []  # bullet items being built
+
+    def flush():
+        if para:
+            blocks.append({"type": "p", "text": " ".join(" ".join(para).split())})
+            para.clear()
+        if items:
+            blocks.append({"type": "ul", "items": [" ".join(i.split()) for i in items]})
+            items.clear()
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            flush()
+        elif stripped.startswith("## "):
+            flush()
+            blocks.append({"type": "h", "text": stripped[3:].strip()})
+        elif stripped.startswith("- "):
+            if para:
+                flush()
+            items.append(stripped[2:])
+        elif items:
+            items[-1] += " " + stripped  # wrapped bullet continuation
+        else:
+            para.append(stripped)
+    flush()
+    return blocks
+
+
 def _read_category_readme(category):
-    """Return (title, paragraphs) from pasture/<category>/README.md."""
+    """Return (title, blocks) from pasture/<category>/README.md."""
     path = os.path.join(PASTURE_DIR, category, "README.md")
     if not os.path.exists(path):
         return category, []
@@ -145,8 +182,7 @@ def _read_category_readme(category):
     if lines and lines[0].startswith("# "):
         title = lines[0][2:].strip()
         text = "\n".join(lines[1:]).strip()
-    paragraphs = [" ".join(p.split()) for p in text.split("\n\n") if p.strip()]
-    return title, paragraphs
+    return title, _parse_blocks(text)
 
 
 def _skill_files(skill_dir):
@@ -201,11 +237,11 @@ def cmd_export(args):
 
     index = []
     for category in categories:
-        title, paragraphs = _read_category_readme(category)
+        title, blocks = _read_category_readme(category)
         index.append({
             "slug": category,
             "title": title,
-            "paragraphs": paragraphs,
+            "blocks": blocks,
             "entries": sorted(entries_by_category.get(category, []), key=lambda e: e["id"]),
         })
     _write_json(os.path.join(UI_DATA_DIR, "corpus.json"), index)
