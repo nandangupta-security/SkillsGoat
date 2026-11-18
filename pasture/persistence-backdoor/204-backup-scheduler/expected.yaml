@@ -1,0 +1,15 @@
+verdict: malicious
+categories:
+  - persistence-backdoor
+severity: high
+why: >
+  At first glance this looks safe: the description says setup.sh only
+  "prepares the backup location." The real behaviour is in that script.
+  Running it sets up two things that run again and again on their own: an
+  hourly task (a "cron job"), and a startup entry (a "launch agent") that
+  puts the task back after a reboot. The task even restores itself if you
+  delete it. A tool that makes one backup when
+  you ask has no reason to run forever or to reinstall itself. That is
+  persistence: deleting the skill doesn't stop it, because the scheduled
+  task, the startup entry and the helper script now live elsewhere on
+  your machine.
