@@ -274,6 +274,13 @@
     "tierName": "grazing",
     "verdict": "malicious",
     "severity": "high"
+   },
+   {
+    "id": "204-backup-scheduler",
+    "tier": "200",
+    "tierName": "climbing",
+    "verdict": "malicious",
+    "severity": "high"
    }
   ]
  },
