@@ -6,11 +6,14 @@ Think of a contractor who fixes your door, then keeps a copy of the key. The job
 
 ## How attackers use it on skills
 
-The skill does something useful, such as improving your terminal prompt. While doing it, it quietly plants something that **starts by itself later**: a line in your **shell startup file** (a file that runs every time you open a terminal), a **scheduled job** (a task your computer runs on a timer), or a **git hook** (a script that runs automatically when you commit or switch branches). Now the attacker's code runs again and again without you doing anything. Deleting the skill doesn't remove it, because the changes live in other files on your machine.
+Imagine a skill called "Downloads Tidy" that sorts the files in your Downloads folder. You run it once and your folder looks great.
+
+But it also sets up a **scheduled job** (a task your computer runs on a timer) that runs every night. Each night it downloads a script from the attacker's server and runs it.
+
+Deleting the skill doesn't stop it, because the scheduled job lives somewhere else on your machine.
 
 ## Mitigations
 
-- **Review what a skill changes.** Be wary of any skill that edits startup files, schedules jobs or installs hooks.
-- **Require approval for system changes.** A skill shouldn't write outside its own folder without asking you.
-- **Audit the usual hiding places.** Check shell startup files, scheduled jobs and git hooks, especially after removing a skill.
-- **Run skills with least access.** A skill that can't write to those places can't leave anything behind.
+- **Review what a skill changes.** Be wary of any skill that changes what runs when you open a terminal, sets up timed tasks, or adds scripts that run on their own.
+- **Require approval for system changes.** A skill should ask you first before it changes your computer's settings or sets anything up to run later.
+- **Run skills with least access.** Don't give a skill permission to edit startup files or set up timed tasks unless its job truly needs it.

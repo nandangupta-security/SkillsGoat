@@ -4,7 +4,7 @@ Typosquatting is when an attacker publishes something harmful under a name that 
 
 The "typo" is the small difference: one letter changed, a letter added or dropped, a plural, or a look-alike character (like a Cyrillic "а" that looks identical to a Latin "a"). The "squatting" means the attacker sits on that near-identical name and waits for someone to land there.
 
-A familiar example: you type `gooogle.com` instead of `google.com` and end up on a fake site that looks real. Nothing was hacked. You just made a small mistake, and the attacker was waiting for it.
+For example, an attacker publishes a package called `crossenv`, one hyphen away from the popular `cross-env`. Developers who mistype the name install it, and it quietly sends their environment variables, which often hold API keys and passwords, to the attacker's server. Nothing was hacked. They just made a small mistake, and the attacker was waiting for it.
 
 ## How attackers use it on skills
 

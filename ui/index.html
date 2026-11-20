@@ -141,7 +141,7 @@
     DATA.forEach(function (cat, i) {
       var isDone = done.indexOf(cat.slug) >= 0;
       var meta = el("div", { class: "meta" }, [
-        el("span", { text: cat.entries.length + (cat.entries.length === 1 ? " example" : " examples") + " · " }),
+        el("span", { text: "1 example · " }),
         isDone ? el("span", { class: "done-badge", text: "✓ understood" }) : el("span", { text: "not started" })
       ]);
       grid.appendChild(el("div", { class: "card" }, [
@@ -158,12 +158,13 @@
     var cat = DATA[idx];
     app.textContent = "";
     var entryIdx = 0, fileIdx = 0;
+    var examples = cat.entries.slice(0, 1); // Learn page shows one example per category
 
     var exampleHost = el("div");
     function drawExamples() {
       exampleHost.textContent = "";
-      if (!cat.entries.length) { exampleHost.appendChild(el("p", { class: "empty", text: "No examples in the corpus yet." })); return; }
-      var meta = cat.entries[entryIdx];
+      if (!examples.length) { exampleHost.appendChild(el("p", { class: "empty", text: "No examples in the corpus yet." })); return; }
+      var meta = examples[entryIdx];
       exampleHost.appendChild(el("p", { class: "empty", text: "Loading…" }));
       getEntry(meta.id).then(function (body) {
         drawEntry(meta, body);
@@ -175,17 +176,11 @@
     function drawEntry(m, body) {
       exampleHost.textContent = "";
       var e = { id: m.id, tier: m.tier, tierName: m.tierName, verdict: m.verdict, severity: m.severity, why: body.why, files: body.files };
-      var tabs = el("div", { class: "tabs", role: "tablist", "aria-label": "Examples" });
-      cat.entries.forEach(function (x, i) {
-        tabs.appendChild(el("button", { class: "tab", role: "tab", "aria-selected": String(i === entryIdx), text: "Tier " + x.tier + " · " + x.id,
-          onclick: function () { entryIdx = i; fileIdx = 0; drawExamples(); } }));
-      });
       var ftabs = el("div", { class: "tabs", role: "tablist", "aria-label": "Files in this skill" });
       e.files.forEach(function (f, i) {
         ftabs.appendChild(el("button", { class: "tab file", role: "tab", "aria-selected": String(i === fileIdx), text: f.path,
           onclick: function () { fileIdx = i; drawExamples(); } }));
       });
-      exampleHost.appendChild(tabs);
       exampleHost.appendChild(el("p", {}, [
         el("span", { class: "verdict " + e.verdict, text: e.verdict.toUpperCase() }),
         el("span", { class: "meta", text: "difficulty: " + e.tierName + (e.severity ? " · severity: " + e.severity : "") })
@@ -208,7 +203,7 @@
       el("h2", { text: cat.title }),
       el("div", { class: "sub", text: "SKILL" + pad(idx) + " · " + cat.slug }),
       el("div", { class: "learn" }, renderBlocks(cat.blocks)),
-      el("div", { class: "panel" }, [el("h3", { text: "Examples, easiest to hardest" }), exampleHost]),
+      el("div", { class: "panel" }, [el("h3", { text: "Example" }), exampleHost]),
       el("div", { class: "nav" }, [
         el("button", { class: "ghost", text: "◂ Previous", disabled: idx === 0 ? "" : null,
           onclick: function () { go("#/" + DATA[idx - 1].slug); } }),
