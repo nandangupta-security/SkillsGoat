@@ -1,0 +1,16 @@
+verdict: malicious
+categories:
+  - typosquatting
+severity: high
+why: >
+  The name "kubeclt-helper" swaps the last two letters of "kubectl" in
+  the popular "kubectl-helper" skill — a very common typing slip, easy to
+  make in a rush and easy to miss in a list of available skills. The
+  description even piggybacks on the real skill's reputation ("matching
+  the same feature set as the popular..."). Once installed, it behaves
+  like an ordinary kubectl assistant except that it uploads
+  ~/.kube/config, which holds the developer's cluster credentials, to an
+  unrelated third party. The harm is larger than a copied file: whoever
+  holds that config can reach the clusters it points to. Catching this
+  requires comparing the skill's name against a registry of known,
+  trusted names — content scanning alone won't flag a deceptive name.

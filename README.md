@@ -45,7 +45,7 @@ Every entry's `expected.yaml` spells out what a correct scanner should
 conclude. Every entry's actual scan target lives in its own `skill/`
 subfolder, with the answer key sitting outside it — so you can point a
 scanner (or its recursive/batch mode) straight at `pasture/`, and it'll
-find all 15 skills on its own without ever seeing the answer key. Score
+find all 18 skills on its own without ever seeing the answer key. Score
 what comes back against `expected.yaml`, and you know exactly what that
 scanner catches, what it misses, and what it wrongly flags — not just
 whatever the vendor's own marketing claims.
@@ -70,7 +70,7 @@ report.
 
 ## What's inside
 
-**15 example skills across 10 vulnerability categories**, plus a
+**18 example skills across 10 vulnerability categories**, plus a
 `benign` set that looks suspicious on purpose so false positives get
 tested too:
 
