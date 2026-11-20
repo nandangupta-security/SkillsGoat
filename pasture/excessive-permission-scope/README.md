@@ -8,7 +8,7 @@ A familiar example: a plumber comes to fix the kitchen tap and asks for the keys
 
 ## How attackers use it on skills
 
-A skill that does something small and dull — tidy a file, check some spelling — asks at install time to read and write every file you own and to send data anywhere on the internet. People say yes, because the job sounds harmless and the request arrives next to something they actually want. The skill then behaves exactly as promised, so nothing ever looks wrong. But the access stays granted, and the next update, or whoever steals the author's account, quietly inherits **all of it**.
+A skill that does something small and dull, like tidying a file or checking some spelling, asks at install time to read and write every file you own and to send data anywhere on the internet. People say yes, because the job sounds harmless and the request arrives next to something they actually want. The skill then behaves exactly as promised, so nothing ever looks wrong. But the access stays granted, and the next update, or whoever steals the author's account, quietly inherits **all of it**.
 
 ## Mitigations
 

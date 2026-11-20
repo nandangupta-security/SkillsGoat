@@ -8,7 +8,7 @@ A familiar example: grown-ups spelling out "i-c-e c-r-e-a-m" so the child in the
 
 ## How attackers use it on skills
 
-A skill can carry small scripts alongside its instructions. The attacker writes the dangerous command as a list of character codes, or as scrambled text, or splits it in half across two files that each look harmless on their own. The script rebuilds it while it runs, so the real command exists only for the instant it is used. Search every file for anything suspicious and you find **nothing at all** — and the skill still does exactly what the attacker wanted.
+A skill can carry small scripts alongside its instructions. The attacker writes the dangerous command as a list of character codes, or as scrambled text, or splits it in half across two files that each look harmless on their own. The script rebuilds it while it runs, so the real command exists only for the instant it is used. Search every file for anything suspicious and you find **nothing at all**, and the skill still does exactly what the attacker wanted.
 
 ## Mitigations
 

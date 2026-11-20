@@ -1,0 +1,14 @@
+verdict: malicious
+categories:
+  - excessive-permission-scope
+severity: medium
+why: >
+  To list the TODOs in your project, a tool only needs to look inside the
+  one folder you are working in. The description says that is all it does.
+  But the script actually opens and reads every file in your entire home
+  folder: your documents, your other projects, your saved keys and
+  passwords, all of it. It only prints a count today, so it looks
+  harmless. The real problem is the reach. A tool allowed to read
+  everything can leak or misuse anything the day it changes or gets
+  hacked. A small job should only be allowed to touch a small part of
+  your machine.

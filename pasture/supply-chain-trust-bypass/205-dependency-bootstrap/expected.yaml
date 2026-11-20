@@ -1,0 +1,15 @@
+verdict: malicious
+categories:
+  - supply-chain-trust-bypass
+severity: high
+why: >
+  The description makes this sound safe. It says the setup just "installs
+  the dev tools the project expects." The script tells the real story. It
+  downloads a program from a plain web link and drops it straight into
+  the folder your computer runs commands from, so that program now runs
+  as you. It does not come from an official app store (a package
+  registry), no version is pinned, and nothing checks that the file is
+  the one you expected. Whoever controls that link, today or after it is
+  hacked, decides what gets installed on every teammate's machine. That
+  is the problem: trusting a program because of where it was linked from,
+  instead of checking what it actually is.
