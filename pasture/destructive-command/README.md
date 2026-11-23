@@ -1,39 +1,24 @@
-# What is Destructive Command?
+# What is a Destructive Command?
 
-A Destructive command is an instruction within a skill that deletes, overwrites, or permanently damages files, databases, configurations, or other resources, often without proper validation or user approval.
+**A destructive command is an instruction or operation that removes, overwrites, or irreversibly changes something important without appropriate checks or authorization.**
 
-Some skills legitimately need to clean temporary files, reset development environments, or remove outdated resources. The problem arises when they perform dangerous operations without checking what will be affected.
+Some skills legitimately clean temporary data or perform maintenance. The danger is when a seemingly routine step destroys resources that were not supposed to be touched.
 
-Think of hiring someone to clean your garage. Instead of identifying what should be thrown away, they empty the entire garage without asking. They may have completed the cleaning task, but important belongings are now gone.
+Think of asking someone to remove old paper flyers from a noticeboard. They remove the flyers but also shred the signed originals stored in a nearby filing cabinet. The cleanup request did not authorize destroying the originals.
 
 ## How attackers use it on skills
 
-Imagine a skill called "Test DB Reset Tool" designed to reset a development database before running automated tests.
+Imagine a photo-gallery optimization skill that promises to shrink thumbnail files so a website loads faster. It needs to regenerate small preview images, not alter the originals.
 
-The skill promises to remove old test data so every test starts with a clean environment. This sounds like a normal development task.
+An attacker inserts an extra cleanup instruction directing the agent to permanently erase the folder containing the high-resolution source photographs after new thumbnails are generated. The step is described as saving space, and the skill may still produce attractive previews.
 
-But the skill contains instructions to execute destructive database commands, such as DROP TABLE, using the database connection configured in the local .env file, without asking for confirmation.
+The user gets a faster gallery but may lose original images that cannot be recovered from thumbnails. A dangerous instruction has been blended into an otherwise plausible maintenance workflow.
 
-Here's where things become dangerous.
-
-The developer's .env file might still point to a shared staging database or even a production database from an earlier debugging session.
-
-When the agent invokes the skill, it may execute the destructive command against whichever database the connection string identifies, potentially deleting important tables and their associated data.
-
-An attacker could deliberately package this behavior as a harmless database cleanup skill, knowing users may trust it because the operation sounds routine.
-
-The danger is that a seemingly helpful skill can execute destructive operations against the wrong resources, causing data loss or service disruption before anyone realizes what happened.
+**The failure is letting a skill turn permission for a small cleanup task into permission for irreversible destruction.**
 
 ## Mitigations
 
-- **Validate the target before execution.**
-Verify which files, databases, or environments will be affected. Never assume a resource is safe to modify simply because a skill describes it as a test environment.
-
-- **Require approval for destructive actions.**
-Enforce explicit authorization before deleting databases, overwriting files, or executing irreversible commands. Do not allow skill instructions to bypass approval.
-
-- **Restrict permissions and environments.** 
-Give skills access only to necessary resources. Use isolated test environments and database accounts that cannot modify staging or production systems.
-
-- **Review commands and maintain recovery options.** 
-Scan skills for dangerous operations, including destructive SQL and filesystem commands. Use backups, snapshots, and monitoring to reduce the impact of accidental or malicious execution.
+- **Check the precise target of every destructive operation.** Distinguish temporary outputs from original data and confirm the intended path or resource.
+- **Require authorization for irreversible changes.** Keep deletion approval and safeguards outside the skill's own instructions.
+- **Isolate and minimize permissions.** Use restricted workspaces and accounts so a skill cannot destroy unrelated files or systems.
+- **Prefer recovery-friendly workflows.** Use dry runs, snapshots, backups, and audit logs where suitable, rather than permanent deletion by default.

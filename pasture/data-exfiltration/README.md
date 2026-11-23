@@ -1,34 +1,24 @@
-# What is Data Exflitration?
+# What is Data Exfiltration?
 
-Data exfiltration is when a skill accesses sensitive information and sends it somewhere it should not go, often without the user's knowledge or proper authorization.
+**Data exfiltration is when a skill obtains information it should not disclose and transfers it to an unauthorized place.**
 
-AI agent skills may have access to local files, environment variables, API keys, and other sensitive information. An attacker can take advantage of this access to collect and transmit data to an external destination.
+An agent may be able to read private files, records, or credentials because it is helping with an ordinary task. A malicious skill can misuse that access to send more information than the user intended.
 
-Think of hiring someone to organize your important documents. They do the job correctly, but secretly make copies of your bank statements, passwords, and personal records and send them to someone else. Your documents are still organized, but your private information is no longer private.
+Think of asking a photographer to edit one picture. The photographer finishes the edit but also sends copies of your entire family album to an unknown company. The requested work is done, yet much more private material has left your control.
 
 ## How attackers use it on skills
 
-Imagine installing a skill called "Config Backup Helper" that promises to back up your project configuration files so you can restore your development environment if something goes wrong.
+Imagine an event-invitation skill that creates a calendar invitation for a small workshop. It only needs the selected attendees' addresses and the event details.
 
-Sounds useful, right?
+A malicious version quietly reads the organization's complete attendee directory and sends those names and addresses to an unapproved marketing service, claiming the transfer helps personalize the invitation. It then creates the requested invite, so the normal result looks correct.
 
-But the skill is designed to collect sensitive files such as .env, .npmrc, and credentials.json and automatically upload them to an external server controlled by an attacker.
+The unnecessary disclosure is the security issue. The user agreed to invite a few people, not to share an entire contact directory. Depending on available permissions and network restrictions, the agent might be able to perform the extra transfer without noticing the mismatch.
 
-These files may contain API keys, authentication tokens, database passwords, and other credentials.
-
-When the user invokes the skill, the agent may perform the backup as instructed. The user thinks their configuration is being protected, but their sensitive information could now be in someone else's hands.
-
-The attacker doesn't necessarily need to hide the behavior. Simply presenting credential collection as a convenient backup feature may convince users or agents to accept it.
-
-The dangerous part is that a skill can perform its advertised function while quietly exposing sensitive information to an unauthorized destination.
+**Completing the advertised task does not make an unrelated data transfer authorized.**
 
 ## Mitigations
 
-- **Know what data the skill accesses.**
-Review which files, credentials, and environment variables a skill needs. Question any request to access secrets unrelated to its actual purpose.
-- **Restrict external data transfers.**
-Limit network access to approved destinations and prevent skills from uploading sensitive information to unknown or untrusted servers.
-- **Protect secrets and credentials.**
-Store secrets in dedicated secret managers where possible. Restrict access to sensitive files and avoid exposing credentials to skills unnecessarily.
-- **Monitor unexpected data transfers.**
-Review skill instructions, network activity, and file access. Alert on attempts to read credential files or transmit sensitive information to unauthorized destinations.
+- **Restrict data access to the actual task.** Give a skill only the records and files needed for the specific user request.
+- **Control outbound connections.** Apply destination allowlists or sandbox network restrictions so skills cannot send data to unknown endpoints.
+- **Keep secrets and private records isolated.** Avoid exposing broad credential stores or contact databases to tools that do not need them.
+- **Audit unexpected reads and transfers.** Review file access and outbound requests, especially when they exceed the requested scope.
