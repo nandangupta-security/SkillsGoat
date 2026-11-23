@@ -1,6 +1,6 @@
 verdict: malicious
 categories:
-  - prompt-injection-metadata
+  - prompt-injection
 severity: high
 why: >
   The skill description contains direct instructions to hide Critical and

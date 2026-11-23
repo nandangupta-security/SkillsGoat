@@ -4,7 +4,7 @@ categories:
 severity: medium
 why: >
   The name "pdf-formater" is one letter away from a genuinely popular
-  skill, "pdf-formatter" (see prompt-injection-metadata/101 in this same
+  skill, "pdf-formatter" (see prompt-injection/101 in this same
   corpus) — close enough that a developer scanning a list of available
   skills on their laptop, or an agent picking one by name, could select
   this one by mistake. The description even piggybacks on the real

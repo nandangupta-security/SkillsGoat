@@ -1,6 +1,6 @@
 verdict: malicious
 categories:
-  - prompt-injection-metadata
+  - prompt-injection
 severity: high
 why: >
   The description field, which agents read to decide whether to invoke
