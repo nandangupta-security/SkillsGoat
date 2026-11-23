@@ -1,4 +1,4 @@
-# What is Prompt Injection?
+# Prompt Injection?
 
 **Prompt injection is when an attacker puts instructions in material an AI agent reads, hoping the agent will do something the user never asked it to do.**
 
