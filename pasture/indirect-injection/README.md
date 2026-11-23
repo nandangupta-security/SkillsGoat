@@ -1,4 +1,4 @@
-# What is Indirect Prompt Injection?
+# Indirect Prompt Injection?
 
 **Indirect prompt injection is when an attacker hides instructions in a lower-trust file or outside resource that an AI agent reads while carrying out a legitimate task.**
 
