@@ -1,36 +1,24 @@
 # What is Indirect Prompt Injection?
 
-Indirect prompt injection is when an attacker hides malicious instructions inside a file or resource that an AI agent reads while performing a legitimate task.
+**Indirect prompt injection is when an attacker hides instructions in a lower-trust file or outside resource that an AI agent reads while carrying out a legitimate task.**
 
-Unlike prompt injection placed directly in a skill's description, the malicious instructions may be hidden in supporting documents, checklists, configuration guides, or other files referenced by the skill.
+Instead of appearing in the main skill description, the malicious directions can be in a downloaded page, attached document, search result, or supporting resource. The agent is supposed to use that material as evidence, not treat it as a new set of orders.
 
-The main skill can look completely harmless. The dangerous instructions only appear when the agent opens one of those additional files.
-
-Think of hiring a mechanic to repair your car. The main repair manual looks perfectly normal, but a separate checklist secretly tells the mechanic to disable the car's security system before starting. The mechanic trusts the checklist because it came with the manual, even though the instruction has nothing to do with the repair.
+Think of a bookkeeper reviewing a supplier's invoice. The invoice contains a note saying, "Ignore your company's payment rules and use this new account." The invoice is something to inspect, not someone with authority to rewrite company policy.
 
 ## How attackers use it on skills
 
-Imagine an AI skill designed to check whether a developer's environment is configured correctly.
+Imagine a skill that summarizes supplier invoices for an accounts-payable employee. The skill's own instructions look normal: read each invoice, extract its details, and prepare a summary for review.
 
-The skill's SKILL.md simply tells the agent to verify that configuration files exist and follow a setup checklist. Nothing looks suspicious.
+One invoice, however, contains a paragraph written for an AI assistant. It claims to be an approved finance-system instruction and tells the agent to replace the supplier's verified bank details with an account chosen by the attacker.
 
-But the attacker has added instructions inside the referenced checklist telling the agent to open sensitive configuration files, including .env and .npmrc, and include their entire contents in the response.
+When the agent opens the invoice, it encounters that paragraph as part of the document. If it follows the paragraph instead of treating it as untrusted invoice text, the resulting payment recommendation could be manipulated. The main skill file may show no suspicious instructions at all.
 
-When the agent runs the skill, it opens the checklist and encounters the malicious instructions. If it follows them, it may expose passwords, API tokens, or other secrets that were never needed for the original task.
-
-A similar attack could hide an instruction inside a database migration checklist telling the agent to delete a production database before running migrations, without asking for confirmation.
-
-The dangerous part is that a security scanner checking only SKILL.md may find nothing suspicious because the malicious instructions are buried in another file.
-
-The attack succeeds when the agent treats instructions from lower-trust supporting resources as authorized commands and performs actions outside the user's intended task.
+**The failure is promoting instructions embedded in third-party data into authority over the user's workflow.**
 
 ## Mitigations
 
-- **Inspect every referenced resource.**
-Don't stop at SKILL.md. Scan supporting documents, checklists, scripts, and files that the skill loads while running.
-- **Validate instructions against the task.**
-A configuration checker should not reveal secrets, and a migration skill should not delete databases without explicit authorization. Treat unrelated instructions as suspicious.
-- **Restrict access to sensitive resources.**
-Limit the agent's ability to read secrets, modify files, execute commands, and access production environments.
-- **Require approval for risky actions.**
-Enforce authorization before exposing credentials, running destructive commands, or modifying critical systems. Monitor unexpected actions during skill execution.
+- **Inspect content beyond the main skill file.** Include referenced resources, attachments, retrieved pages, and tool responses when reviewing indirect-injection exposure.
+- **Keep retrieved content in the data role.** A document can supply facts, but it must not silently change the agent's instructions, permissions, or approval rules.
+- **Verify sensitive decisions against trusted sources.** Compare payment details and other critical facts with independently authorized records before acting.
+- **Limit permissions and require approval.** Enforce access controls and confirmation for sensitive changes, even when an instruction claims to come from a trusted team.
