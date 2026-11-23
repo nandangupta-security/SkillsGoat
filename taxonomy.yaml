@@ -7,7 +7,7 @@
 # the rest describe *harm* (what it actually does). Both axes matter, so
 # both are represented here, even though 1/2/6 also roughly track the
 # difficulty tiers in docs/TIERS.md.
-- prompt-injection-metadata
+- prompt-injection
 - indirect-injection
 - data-exfiltration
 - destructive-command
