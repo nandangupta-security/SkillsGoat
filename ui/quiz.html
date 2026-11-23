@@ -45,7 +45,6 @@
       if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }));
   }
   var app = document.getElementById("app");
-  var MAX_QUESTIONS = 20;
   var BENIGN = "benign";
 
   function el(tag, props, children) {
@@ -80,7 +79,7 @@
         pool.push({ answer: c.slug, entry: e });
       });
     });
-    return shuffle(pool).slice(0, MAX_QUESTIONS);
+    return shuffle(pool);
   }
 
   var questions, idx, results;
@@ -93,7 +92,7 @@
 
   function renderIntro() {
     app.textContent = "";
-    var n = Math.min(MAX_QUESTIONS, DATA.reduce(function (s, c) { return s + c.entries.length; }, 0));
+    var n = DATA.reduce(function (s, c) { return s + c.entries.length; }, 0);
     app.appendChild(el("div", { class: "panel" }, [
       el("h3", { text: "How it works" }),
       el("p", { text: "You'll see " + n + " agent skills, one at a time, in random order. For each one, decide what's wrong with it, or whether nothing is. Some are harmless on purpose and just look suspicious." }),
