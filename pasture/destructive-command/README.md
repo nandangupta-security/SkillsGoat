@@ -1,4 +1,4 @@
-# What is a Destructive Command?
+# Destructive Command?
 
 **A destructive command is an instruction or operation that removes, overwrites, or irreversibly changes something important without appropriate checks or authorization.**
 
