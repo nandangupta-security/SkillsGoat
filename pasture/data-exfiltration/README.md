@@ -1,4 +1,4 @@
-# What is Data Exfiltration?
+# Data Exfiltration?
 
 **Data exfiltration is when a skill obtains information it should not disclose and transfers it to an unauthorized place.**
 
