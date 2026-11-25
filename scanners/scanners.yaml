@@ -1,0 +1,29 @@
+# Registry of scanners SkillsGoat can drive.
+#
+# Nothing here is installed by default. `python3 goat.py scanners install <id>`
+# sets one up inside .scanners/ (gitignored). Scanners are optional: if one is
+# missing or broken, Learn, Quiz, export, lint and serve all keep working.
+#
+# To add a scanner: add an entry here and an adapter in scanners/adapters/.
+
+scanners:
+  skill-scanner:
+    name: Cisco skill-scanner
+    adapter: skill_scanner          # scanners/adapters/skill_scanner.py
+    homepage: https://github.com/cisco-ai-defense/skill-scanner
+    license: Apache-2.0
+    install:
+      method: pip-venv              # own virtual environment under .scanners/
+      package: cisco-ai-skill-scanner
+      version: "2.3.2"              # pinned so results are comparable
+      python_min: "3.11"            # the scanner's supported range
+      python_max: "3.14"
+    run:
+      executable: skill-scanner     # inside the venv (bin/ or Scripts/)
+    modes:
+      static:
+        label: Static
+        needs_llm: false
+      judge:
+        label: Static + LLM
+        needs_llm: true

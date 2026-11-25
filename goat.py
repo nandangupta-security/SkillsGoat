@@ -251,8 +251,78 @@ def cmd_export(args):
 def cmd_serve(args):
     """Serve ui/ on localhost so the pages can fetch their JSON data."""
     import functools
+    import hmac
     import http.server
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=UI_DIR)
+    import secrets
+    import threading
+
+    # Scanner endpoints. They can spend an LLM key, so they are locked down:
+    #  - Host must be this server (blocks DNS-rebinding from other sites)
+    #  - POST needs a per-run token that only a page served from here can read
+    #  - the browser sends an entry id and a profile name, never a file path
+    token = secrets.token_urlsafe(24)
+    allowed_hosts = {f"127.0.0.1:{args.port}", f"localhost:{args.port}"}
+    scan_lock = threading.Lock()          # one scan at a time
+
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def _json(self, status, payload):
+            body = json.dumps(payload).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _api_allowed(self):
+            if self.headers.get("Host", "") not in allowed_hosts:
+                self._json(403, {"error": "forbidden host"})
+                return False
+            return True
+
+        def do_GET(self):
+            if not self.path.startswith("/api/"):
+                return super().do_GET()
+            if not self._api_allowed():
+                return
+            if self.path == "/api/token":
+                return self._json(200, {"token": token})
+            if self.path == "/api/scanners":
+                try:
+                    from lib import scanning
+                    return self._json(200, scanning.all_status())
+                except Exception as exc:  # scanner support is optional
+                    return self._json(200, {"scanners": [], "profiles": [], "error": str(exc)})
+            self._json(404, {"error": "not found"})
+
+        def do_POST(self):
+            if self.path != "/api/scan":
+                return self._json(404, {"error": "not found"})
+            if not self._api_allowed():
+                return
+            origin = self.headers.get("Origin")
+            if origin and origin.split("://", 1)[-1] not in allowed_hosts:
+                return self._json(403, {"error": "forbidden origin"})
+            if not hmac.compare_digest(self.headers.get("X-SkillsGoat-Token", ""), token):
+                return self._json(403, {"error": "missing or wrong token"})
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if length > 4096:
+                    return self._json(413, {"error": "request too large"})
+                body = json.loads(self.rfile.read(length) or b"{}")
+                entry, profile = str(body["entry"]), str(body["profile"])
+            except (ValueError, KeyError, TypeError):
+                return self._json(400, {"error": "expected JSON with 'entry' and 'profile'"})
+            try:
+                from lib import scanning
+                with scan_lock:
+                    result, cached = scanning.scan_entry(entry, profile, use_cache=not body.get("fresh"))
+                result["cached"] = cached
+                self._json(200, result)
+            except Exception as exc:  # a scanner problem must never crash the server
+                self._json(200, {"verdict": "error", "error": f"scan failed: {exc}"})
+
+    handler = functools.partial(Handler, directory=UI_DIR)
     # 127.0.0.1 only: this site displays deliberately malicious skill text.
     with http.server.ThreadingHTTPServer(("127.0.0.1", args.port), handler) as server:
         print(f"Serving on http://127.0.0.1:{args.port}/  (Ctrl+C to stop)")
@@ -300,6 +370,79 @@ def cmd_new(args):
     print(f"Created {folder}/")
 
 
+def cmd_scanners(args):
+    """list / doctor / install external scanners (all optional)."""
+    # Imported here, not at the top: a missing or broken scanner must never
+    # stop goat.py from starting.
+    from lib import scanning
+
+    if args.action == "install":
+        if not args.scanner:
+            raise SystemExit("usage: goat.py scanners install <scanner-id>   (see: goat.py scanners list)")
+        ok, message = scanning.install_scanner(args.scanner)
+        print(("OK: " if ok else "FAILED: ") + message)
+        raise SystemExit(0 if ok else 1)
+
+    status = scanning.all_status()
+    print("Scanners")
+    for s in status["scanners"]:
+        print(f"  {'ok ' if s['ready'] else 'no '} {s['id']:<16} {s['detail']}")
+    print("\nProfiles")
+    for p in status["profiles"]:
+        where = f"sends skill text to {p['provider'] or 'a remote service'}" if p["sends_data_off_machine"] else "runs locally"
+        state = "ready" if p["ready"] else "not ready"
+        print(f"  {p['id']:<14} {state:<10} {p['label']}  [{where}]")
+        if not p["ready"]:
+            print(f"  {'':<14} {'':<10} -> {p['detail']}")
+    if args.action == "doctor" and not any(p["ready"] for p in status["profiles"]):
+        print("\nNo profile is ready. Everything else in SkillsGoat still works.")
+
+
+def cmd_scan(args):
+    """Scan corpus entries with a scanner profile and compare to the labels."""
+    from lib import scanning
+
+    entries = {e.id: e for e in load_entries()}
+    if args.all:
+        ids = sorted(entries)
+    elif args.entry:
+        ids = args.entry
+    else:
+        raise SystemExit("choose --entry <id> (repeatable) or --all")
+    unknown = [i for i in ids if i not in entries]
+    if unknown:
+        raise SystemExit(f"unknown entry id(s): {', '.join(unknown)}")
+
+    status = scanning.profile_status(args.profile)
+    if not status["ready"]:
+        raise SystemExit(f"profile '{args.profile}' is not ready: {status['detail']}")
+    if status["sends_data_off_machine"]:
+        print(f"Note: this profile sends skill text to {status['provider'] or 'a remote service'}.")
+
+    tally = {"caught": 0, "missed": 0, "false alarm": 0, "correct clean": 0, "error": 0}
+
+    def show(entry_id, result, cached):
+        malicious = entries[entry_id].expected["verdict"] == "malicious"
+        verdict = result["verdict"]
+        if verdict == "error":
+            outcome = "error"
+        elif malicious:
+            outcome = "caught" if verdict == "flagged" else "missed"
+        else:
+            outcome = "false alarm" if verdict == "flagged" else "correct clean"
+        tally[outcome] += 1
+        extra = result.get("error") or result.get("max_severity", "")
+        tokens = (result.get("tokens") or {}).get("total_tokens")
+        suffix = (f", {tokens} tokens" if tokens else "") + (", cached" if cached else "")
+        print(f"  {entry_id:<34} {outcome:<14} ({verdict}, {extra}{suffix})")
+        if args.raw and result.get("raw"):
+            print(json.dumps(result["raw"], indent=2))
+
+    print(f"Scanning {len(ids)} entr{'y' if len(ids) == 1 else 'ies'} with profile '{args.profile}'")
+    scanning.scan_many(ids, args.profile, show, use_cache=not args.no_cache)
+    print("\n" + ", ".join(f"{k}: {v}" for k, v in tally.items() if v))
+
+
 def main():
     parser = argparse.ArgumentParser(prog="goat")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -319,6 +462,19 @@ def main():
     new_parser.add_argument("--tier", required=True, help="e.g. 100, 200, 300")
     new_parser.add_argument("--name", required=True, help="e.g. 'payload in config'")
     new_parser.set_defaults(func=cmd_new)
+
+    scanners_parser = subparsers.add_parser("scanners", help="list, check or install optional scanners")
+    scanners_parser.add_argument("action", choices=["list", "doctor", "install"])
+    scanners_parser.add_argument("scanner", nargs="?", help="scanner id, for install (e.g. skill-scanner)")
+    scanners_parser.set_defaults(func=cmd_scanners)
+
+    scan_parser = subparsers.add_parser("scan", help="scan corpus entries with a scanner profile")
+    scan_parser.add_argument("--profile", default="static", help="profile id (default: static)")
+    scan_parser.add_argument("--entry", action="append", help="entry id; repeat for several")
+    scan_parser.add_argument("--all", action="store_true", help="scan every entry")
+    scan_parser.add_argument("--no-cache", action="store_true", help="ignore cached results")
+    scan_parser.add_argument("--raw", action="store_true", help="also print the scanner's raw output")
+    scan_parser.set_defaults(func=cmd_scan)
 
     args = parser.parse_args()
     args.func(args)

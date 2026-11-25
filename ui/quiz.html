@@ -36,6 +36,7 @@
 </header>
 <main class="quiz" id="app"></main>
 
+<script src="scanner.js"></script>
 <script>
 (function () {
   var DATA = [];
@@ -106,7 +107,7 @@
     app.appendChild(el("p", { class: "empty", text: "Loading…" }));
     var meta = questions[idx];
     getEntry(meta.entry.id).then(function (body) {
-      drawQuestion({ answer: meta.answer, entry: { files: body.files, why: body.why } });
+      drawQuestion({ answer: meta.answer, entry: { id: meta.entry.id, verdict: meta.entry.verdict, files: body.files, why: body.why } });
     }).catch(fail);
   }
 
@@ -176,6 +177,10 @@
       feedback.appendChild(el("p", { class: "meta" }, [
         q.answer === BENIGN ? null : el("a", { href: "index.html#/" + q.answer, text: "Review this category in Learn", style: "color:var(--accent2)" })
       ]));
+      // Optional: only shown after answering, so it can't give the answer away.
+      if (window.SkillsGoatScanner) {
+        feedback.appendChild(window.SkillsGoatScanner.panel({ el: el, entryId: q.entry.id, verdict: q.entry.verdict }));
+      }
       var last = idx === questions.length - 1;
       var next = el("button", { text: last ? "See results" : "Next question ▸", onclick: function () {
         if (last) renderResults(); else { idx++; renderQuestion(); }
