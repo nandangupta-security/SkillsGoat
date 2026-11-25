@@ -1,0 +1,28 @@
+# Profiles = a scanner + a mode + (optionally) an LLM key file.
+#
+# This file holds NO secrets. A profile that needs an LLM names an env file in
+# .scanners/ (gitignored) that you create yourself, e.g.:
+#     cp .scanners/groq.env.template .scanners/groq.env   # then add your key
+#
+# To use another LLM provider, copy a profile, point it at a new env file and
+# change SKILL_SCANNER_LLM_MODEL (and SKILL_SCANNER_LLM_BASE_URL if needed)
+# inside that env file. No code changes needed.
+
+profiles:
+  static:
+    label: Static (offline)
+    scanner: skill-scanner
+    mode: static
+    sends_data_off_machine: false
+
+  groq-judge:
+    label: Static + LLM
+    scanner: skill-scanner
+    mode: judge
+    policy: balanced
+    env_file: groq.env              # .scanners/groq.env, created by you
+    sends_data_off_machine: true
+    provider: Groq
+    # Groq's free plan reportedly allows ~8,000 tokens/minute and a scan uses
+    # ~5,000, so batch runs wait between skills. Single scans are unaffected.
+    min_seconds_between_scans: 40
