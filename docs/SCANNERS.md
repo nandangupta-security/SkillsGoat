@@ -15,7 +15,7 @@ Scanners are never copied into this repo. They are downloaded on demand into
     python3 goat.py scanners install skill-scanner   # one-time, needs internet
     python3 goat.py scanners install skillspector    # optional second scanner
     python3 goat.py scanners list                    # what is installed and ready
-    python3 goat.py scan --all --profile static      # scan the whole corpus, offline
+    python3 goat.py scan --all --profile skill-scanner-static   # scan the whole corpus, offline
 
 `scan` prints, for every skill, whether the scanner **caught** it, **missed** it,
 raised a **false alarm** on a benign skill, or was **correct clean**. A scan that
@@ -26,14 +26,14 @@ scanner's own unedited output, and `--no-cache` to ignore cached results.
 
 ## Profiles
 
-A profile is a scanner plus a mode, defined in `scanners/profiles.yaml`:
+Each scanner has two profiles, defined in `scanners/profiles.yaml`:
 
 | Profile | What it does | Sends skill text off your machine? |
 |---|---|---|
-| `static` | Cisco skill-scanner: rules and code analysis only | No |
+| `skill-scanner-static` | Cisco skill-scanner: rules and code analysis only | No |
+| `skill-scanner-llm` | Cisco skill-scanner plus an LLM (about 5,000 tokens a skill) | Yes, to your chosen provider |
 | `skillspector-static` | NVIDIA SkillSpector: static analysis only | No (see the note below) |
-| `groq-judge` | Cisco skill-scanner, Static + LLM: rules plus an LLM (set up here with Groq's free plan) | Yes, to Groq |
-| `skillspector-llm` | SkillSpector, Static + LLM: static analysis plus about four LLM calls per skill (set up here with Groq's free plan) | Yes, to Groq |
+| `skillspector-llm` | SkillSpector plus about four LLM calls per skill | Yes, to your chosen provider |
 
 The static mode catches code-level tricks. The LLM also understands plain
 English, so it catches problems that rules cannot, such as a skill told to obey
@@ -41,37 +41,48 @@ instructions found in fetched content.
 
 ## Using the LLM (Static + LLM)
 
-LLM profiles read their key from a file in `.scanners/` that you create yourself.
-The key never goes in this repo, the browser or the chat.
+**You choose one LLM provider for the whole app: Groq (has a free plan), OpenAI or
+Anthropic (Claude).** Every scanner's "Static + LLM" mode then uses that provider, but
+**each scanner has its own key**, so you can use separate keys.
 
-    cp scanners/templates/groq.env.template .scanners/groq.env
-    chmod 600 .scanners/groq.env
-    # open .scanners/groq.env and paste your key after SKILL_SCANNER_LLM_API_KEY=
+    python3 goat.py llm set openai     # choose the provider (or let ./install.sh ask you)
+    python3 goat.py llm show           # which provider, and which scanners still need a key
 
-To use a different provider, copy a profile in `scanners/profiles.yaml`, point it at
-a new env file, and set `SKILL_SCANNER_LLM_MODEL` (and `SKILL_SCANNER_LLM_BASE_URL`
-if the provider needs one) in that file. No code changes are needed. Examples of
-model names: `anthropic/<model>`, `openai/<model>`, `ollama/<model>` (local, no key).
+Each scanner's key lives in its own file in `.scanners/` (gitignored), named
+`<scanner>-<provider>.env`:
 
-SkillSpector's LLM mode uses its own key file, because it reads different variables:
+| Provider | Cisco skill-scanner | SkillSpector |
+|---|---|---|
+| Groq | `skill-scanner-groq.env` | `skillspector-groq.env` |
+| OpenAI | `skill-scanner-openai.env` | `skillspector-openai.env` |
+| Anthropic | `skill-scanner-anthropic.env` | `skillspector-anthropic.env` |
 
-    cp scanners/templates/skillspector-groq.env.template .scanners/skillspector-groq.env
-    chmod 600 .scanners/skillspector-groq.env
-    # put your key after SKILLSPECTOR_COMPAT_API_KEY=
+`./install.sh` asks for the provider once, then for each scanner's key (typed hidden).
+To do it by hand, copy the matching file from `scanners/templates/` (named
+`<scanner>-<provider>.env.template`) to `.scanners/` without `.template`, `chmod 600`
+it, and put the key after the `=` sign. The key never goes in this repo, the browser or
+the chat.
 
-It makes about four LLM calls per skill. Measured on Groq with `openai/gpt-oss-120b`:
-roughly 9,500 tokens for a skill with only a `SKILL.md` and about 16,000 for one with a
-script. On Groq's reported free limits (about 8,000 tokens a minute, 200,000 a day) a
-single scan is fine, but the whole corpus will not fit in one day.
+Switching provider later keeps the keys you already saved; just run
+`python3 goat.py llm set <provider>` again. Other providers (a gateway, Ollama, Bedrock)
+work by adding an entry under `providers:` in `scanners/scanners.yaml` and a template.
+
+The model each template uses is a default you can change inside the key file.
+**Only the Groq setup has been tested end to end; the OpenAI and Anthropic templates follow
+each scanner's documentation but have not been run against a real key.**
+
+SkillSpector makes about four LLM calls per skill. Measured on Groq with
+`openai/gpt-oss-120b`: roughly 9,500 tokens for a skill with only a `SKILL.md` and about
+16,000 for one with a script. On Groq's reported free limits (about 8,000 tokens a minute,
+200,000 a day) a single scan is fine, but the whole corpus will not fit in one day.
 
 SkillSpector normally sends up to 10 LLM requests at once. On a free plan that burst is
 refused with rate-limit errors, so SkillsGoat sets `SKILLSPECTOR_MAX_LLM_CONCURRENCY=1`
-(one request at a time) for LLM scans. Scans are slower, and a skill with several files
-can take a few minutes. On a paid plan you can raise it by adding that variable, with a
-higher number, to the profile's env file.
+(one request at a time) for LLM scans. The OpenAI and Anthropic templates raise it to 4,
+since paid plans allow it; edit the key file to change it.
 
-Free-tier limits apply. Profiles can set `min_seconds_between_scans`: a scan then waits until that
-much time has passed since the previous one, instead of hitting the provider's rate limit.
+On a free-plan provider (Groq), SkillsGoat also waits between scans, so a batch stays
+under the per-minute token cap. Paid providers are not paced.
 
 ## The benchmark ledger
 
@@ -133,7 +144,7 @@ corpus skills depend on this.
 2. Add `scanners/adapters/<name>.py` with a class based on `ScannerAdapter` that
    implements `check()` and `scan()` and returns a `ScanResult`
    (see `scanners/adapters/base.py`).
-3. Add one or more profiles in `scanners/profiles.yaml`.
+3. Add its two profiles (static and, if it has an LLM mode, `llm: true`) in `scanners/profiles.yaml`.
 
 Paid or cloud scanners follow the same pattern; their adapter calls the vendor's
 API with a key read from a file in `.scanners/`.

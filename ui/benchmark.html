@@ -66,6 +66,9 @@
     });
     skills.sort(function (a, b) { return a.id < b.id ? -1 : 1; });
     var profiles = scanners.profiles || [];
+    function nameOf(p) {
+      return (p.scanner_name || p.scanner) + " · " + p.label + (p.mode === "judge" && p.provider ? " · " + p.provider : "");
+    }
 
     // rows by profile and entry
     var byProfile = {};
@@ -91,7 +94,7 @@
       var falseAlarms = ben.filter(function (s) { return rows[s.id].outcome === "false alarm"; }).length;
       var rate = mal.length >= MIN_MALICIOUS ? Math.round(caught / mal.length * 100) + "%" : "n/a";
       metrics.appendChild(el("tr", {}, [
-        el("td", { text: (p.scanner_name || p.scanner) + " · " + p.label }),
+        el("td", { text: nameOf(p) }),
         el("td", { text: scanned.length + " / " + skills.length + (stale.length ? " (" + stale.length + " outdated)" : "") }),
         el("td", { text: caught + " / " + mal.length }),
         el("td", { text: String(mal.length - caught) }),
@@ -117,7 +120,7 @@
     function drawTable() {
       tableHost.textContent = "";
       var head = el("tr", {}, [el("th", { text: "Skill" }), el("th", { text: "Label" })]);
-      profiles.forEach(function (p) { head.appendChild(el("th", { text: (p.scanner_name || p.scanner) + " · " + p.label })); });
+      profiles.forEach(function (p) { head.appendChild(el("th", { text: nameOf(p) })); });
       var table = el("table", { class: "cmp" }, [head]);
       skills.forEach(function (s) {
         var cells = profiles.map(function (p) { var r = (byProfile[p.id] || {})[s.id]; return r && !r.stale ? r : null; });

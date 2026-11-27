@@ -6,6 +6,17 @@
 #
 # To add a scanner: add an entry here and an adapter in scanners/adapters/.
 
+# LLM providers a scanner's "Static + LLM" mode can use. The user picks ONE for the whole app
+# (python3 goat.py llm set <id>, or ./install.sh); each scanner keeps its own key for it.
+providers:
+  groq:
+    name: Groq
+    free_plan: true            # free plans cap tokens per minute, so LLM scans are paced
+  openai:
+    name: OpenAI
+  anthropic:
+    name: Anthropic
+
 scanners:
   skill-scanner:
     name: Cisco skill-scanner
@@ -20,6 +31,12 @@ scanners:
       python_max: "3.14"
     run:
       executable: skill-scanner     # inside the venv (bin/ or Scripts/)
+    llm:
+      keys:                                # the variable that holds the key, per provider
+        groq: SKILL_SCANNER_LLM_API_KEY
+        openai: SKILL_SCANNER_LLM_API_KEY
+        anthropic: SKILL_SCANNER_LLM_API_KEY
+      free_plan_pause_seconds: 0           # ~5,000 tokens per scan: fits a free plan on its own
     modes:
       static:
         label: Static
@@ -41,6 +58,12 @@ scanners:
       python_max: "3.13"
     run:
       executable: skillspector
+    llm:
+      keys:
+        groq: SKILLSPECTOR_COMPAT_API_KEY
+        openai: OPENAI_API_KEY
+        anthropic: ANTHROPIC_API_KEY
+      free_plan_pause_seconds: 75          # ~10,000+ tokens per scan against ~8,000/minute
     modes:
       static:
         label: Static

@@ -1,19 +1,26 @@
-# Profiles = a scanner + a mode + (optionally) an LLM key file.
+# Two profiles per scanner: Static (offline) and Static + LLM.
 #
-# This file holds NO secrets. A profile that needs an LLM names an env file in
-# .scanners/ (gitignored) that you create yourself, e.g.:
-#     cp .scanners/groq.env.template .scanners/groq.env   # then add your key
+# A profile with `llm: true` uses the ONE LLM provider chosen for the whole app
+# (groq, openai or anthropic; see `python3 goat.py llm show`). Which provider, which
+# key file and which key variable it uses is worked out from that choice and from
+# scanners/scanners.yaml, so adding a provider needs no new profiles.
 #
-# To use another LLM provider, copy a profile, point it at a new env file and
-# change SKILL_SCANNER_LLM_MODEL (and SKILL_SCANNER_LLM_BASE_URL if needed)
-# inside that env file. No code changes needed.
+# This file holds NO secrets. Each scanner has its own key file per provider in
+# .scanners/ (gitignored), e.g. .scanners/skill-scanner-openai.env.
 
 profiles:
-  static:
+  skill-scanner-static:
     label: Static (offline)
     scanner: skill-scanner
     mode: static
     sends_data_off_machine: false
+
+  skill-scanner-llm:
+    label: Static + LLM
+    scanner: skill-scanner
+    mode: judge
+    policy: balanced
+    llm: true
 
   skillspector-static:
     label: Static (offline)
@@ -25,28 +32,9 @@ profiles:
     # here CAUTION and above are flagged.
     flag_at: CAUTION
 
-  groq-judge:
-    label: Static + LLM
-    scanner: skill-scanner
-    mode: judge
-    policy: balanced
-    env_file: groq.env              # .scanners/groq.env, created by you
-    key_var: SKILL_SCANNER_LLM_API_KEY   # the variable in that file holding the key
-    sends_data_off_machine: true
-    provider: Groq
-    # Groq's free plan reportedly allows ~8,000 tokens/minute and a scan uses
-    # ~5,000, so batch runs wait between skills. Single scans are unaffected.
-    min_seconds_between_scans: 40
-
   skillspector-llm:
     label: Static + LLM
     scanner: skillspector
     mode: judge
-    env_file: skillspector-groq.env  # .scanners/skillspector-groq.env, created by you
-    key_var: SKILLSPECTOR_COMPAT_API_KEY
-    sends_data_off_machine: true
-    provider: Groq
     flag_at: CAUTION
-    # SkillSpector makes ~4 LLM calls per skill (~9,500 tokens measured), so on
-    # Groq's reported 8,000 tokens/minute a batch waits ~75s between skills.
-    min_seconds_between_scans: 75
+    llm: true
