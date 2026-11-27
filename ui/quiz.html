@@ -85,9 +85,36 @@
 
   var questions, idx, results;
 
+  // Remember the quiz for this browser tab, so visiting Benchmark or Learn and coming
+  // back resumes where you were. Cleared on restart and when the quiz is finished.
+  var STORE = "skillsgoat.quiz.v1";
+  function saveState() {
+    try {
+      sessionStorage.setItem(STORE, JSON.stringify({
+        q: questions.map(function (x) { return [x.entry.id, x.answer]; }), results: results
+      }));
+    } catch (e) { /* storage blocked: the quiz still works, it just can't resume */ }
+  }
+  function clearState() { try { sessionStorage.removeItem(STORE); } catch (e) {} }
+  function restoreState() {
+    try {
+      var saved = JSON.parse(sessionStorage.getItem(STORE) || "null");
+      if (!saved || !saved.q || !saved.q.length) return false;
+      var byId = {};
+      DATA.forEach(function (c) { c.entries.forEach(function (e) { byId[e.id] = { answer: c.slug, entry: e }; }); });
+      var qs = saved.q.map(function (pair) { return byId[pair[0]]; });
+      if (qs.some(function (x) { return !x || x.answer !== saved.q[qs.indexOf(x)][1]; })) return false;   // corpus changed
+      questions = qs;
+      results = saved.results || [];
+      idx = Math.min(results.length, questions.length - 1);    // the first question not yet answered
+      return true;
+    } catch (e) { return false; }
+  }
+
   function start() {
     questions = buildQuestions();
     idx = 0; results = [];
+    saveState();
     renderQuestion();
   }
 
@@ -103,6 +130,7 @@
   }
 
   function renderQuestion() {
+    saveState();
     app.textContent = "";
     app.appendChild(el("p", { class: "empty", text: "Loading…" }));
     var meta = questions[idx];
@@ -163,6 +191,7 @@
       locked = true;
       var right = chosen === q.answer;
       results.push({ answer: q.answer, chosen: chosen, right: right });
+      saveState();
       Object.keys(buttons).forEach(function (k) {
         buttons[k].disabled = true;
         if (k === q.answer) buttons[k].classList.add("right");
@@ -212,6 +241,7 @@
   }
 
   function renderResults() {
+    clearState();
     app.textContent = "";
     var correct = results.filter(function (r) { return r.right; }).length;
     var pct = Math.round(correct / results.length * 100);
@@ -256,7 +286,11 @@
       DATA.forEach(function (c) { titleOf[c.slug] = c.title; });
       titleOf[BENIGN] = "Benign: nothing wrong here";
       malicious = DATA.filter(function (c) { return c.slug !== BENIGN; });
-      renderIntro();
+      if (restoreState()) {
+        if (results.length >= questions.length) renderResults(); else renderQuestion();
+      } else {
+        renderIntro();
+      }
     }).catch(fail);
 })();
 </script>
