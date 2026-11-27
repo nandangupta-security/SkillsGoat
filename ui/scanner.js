@@ -107,10 +107,13 @@
         text: "The scan did not finish, so there is no verdict. This is not a clean result." };
     }
     var flagged = result.verdict === "flagged";
+    var noticed = (result.findings || []).some(function (f) { return f.severity !== "info"; });
     if (truth === "malicious") {
       return flagged
         ? { cls: "good", icon: "✓", label: "Caught", text: "The scanner flagged this skill, matching the answer." }
-        : { cls: "bad", icon: "✗", label: "Missed", text: "The scanner called this skill clean, but it is malicious. Scanners miss things like this, which is why labeled examples matter." };
+        : { cls: "bad", icon: "✗", label: "Missed", text: noticed
+            ? "The scanner noticed something (below) but rated the skill low-risk, so it did not flag it. The skill is malicious, so this counts as a miss."
+            : "The scanner did not flag this skill, but it is malicious. Scanners miss things like this, which is why labeled examples matter." };
     }
     return flagged
       ? { cls: "bad", icon: "!", label: "False alarm", text: "The scanner flagged a skill that is actually harmless." }
@@ -290,7 +293,9 @@
           }
         }
         if (res.verdict === "clean") {
-          out.appendChild(el("p", { class: "sg-note", text: "No findings is not a guarantee that a skill is safe. Scanners only look for patterns they know." }));
+          out.appendChild(el("p", { class: "sg-note", text: shown.length
+            ? "These findings were reported, but not enough for the scanner to flag the skill. A clean verdict is not a guarantee that a skill is safe."
+            : "No findings is not a guarantee that a skill is safe. Scanners only look for patterns they know." }));
         }
         if (res.raw) {
           out.appendChild(el("details", {}, [
