@@ -15,14 +15,38 @@ profiles:
     mode: static
     sends_data_off_machine: false
 
+  skillspector-static:
+    label: Static (offline)
+    scanner: skillspector
+    mode: static
+    sends_data_off_machine: false
+    # SkillSpector grades a skill SAFE / CAUTION / DO NOT INSTALL. CAUTION is
+    # its "warn the user" tier, so whether it counts as flagged is our choice:
+    # here CAUTION and above are flagged.
+    flag_at: CAUTION
+
   groq-judge:
     label: Static + LLM
     scanner: skill-scanner
     mode: judge
     policy: balanced
     env_file: groq.env              # .scanners/groq.env, created by you
+    key_var: SKILL_SCANNER_LLM_API_KEY   # the variable in that file holding the key
     sends_data_off_machine: true
     provider: Groq
     # Groq's free plan reportedly allows ~8,000 tokens/minute and a scan uses
     # ~5,000, so batch runs wait between skills. Single scans are unaffected.
     min_seconds_between_scans: 40
+
+  skillspector-llm:
+    label: Static + LLM
+    scanner: skillspector
+    mode: judge
+    env_file: skillspector-groq.env  # .scanners/skillspector-groq.env, created by you
+    key_var: SKILLSPECTOR_COMPAT_API_KEY
+    sends_data_off_machine: true
+    provider: Groq
+    flag_at: CAUTION
+    # SkillSpector makes ~4 LLM calls per skill (~9,500 tokens measured), so on
+    # Groq's reported 8,000 tokens/minute a batch waits ~75s between skills.
+    min_seconds_between_scans: 75

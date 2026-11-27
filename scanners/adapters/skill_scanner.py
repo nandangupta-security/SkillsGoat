@@ -18,16 +18,10 @@ from .base import (
     ScanResult,
     ScannerAdapter,
     error_result,
+    friendly_error,
+    scrub_secrets,
     severity_rank,
 )
-
-def _scrub(text, secrets):
-    """Remove secret values from text before it is shown or logged."""
-    for secret in secrets:
-        if secret and len(secret) >= 8:
-            text = text.replace(secret, "<hidden>")
-    return text
-
 
 class SkillScannerAdapter(ScannerAdapter):
     id = "skill-scanner"
@@ -114,9 +108,9 @@ class SkillScannerAdapter(ScannerAdapter):
         self._cleanup(out_path)
 
         if raw is None:
-            tail = _scrub((proc.stderr or proc.stdout or "no output").strip(), secrets)
-            tail = " | ".join(tail.splitlines()[-3:])[:400]
-            return error_result(self.id, "scanner produced no result: %s" % tail,
+            full = scrub_secrets((proc.stderr or proc.stdout or "no output").strip(), secrets)
+            tail = " | ".join(full.splitlines()[-3:])[:400]
+            return error_result(self.id, friendly_error(full) or "scanner produced no result: %s" % tail,
                                 scanner_version=self.version(), mode=mode)
 
         return self._normalize(raw, profile, mode, elapsed)

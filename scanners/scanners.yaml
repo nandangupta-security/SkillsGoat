@@ -27,3 +27,24 @@ scanners:
       judge:
         label: Static + LLM
         needs_llm: true
+
+  skillspector:
+    name: SkillSpector
+    adapter: skillspector           # scanners/adapters/skillspector.py
+    homepage: https://github.com/NVIDIA/SkillSpector
+    license: Apache-2.0
+    install:
+      method: pip-venv
+      package: skillspector
+      version: "2.13.7"
+      python_min: "3.12"            # 3.14+ needs a native YARA build
+      python_max: "3.13"
+    run:
+      executable: skillspector
+    modes:
+      static:
+        label: Static
+        needs_llm: false
+      judge:
+        label: Static + LLM
+        needs_llm: true
