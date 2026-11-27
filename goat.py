@@ -262,13 +262,21 @@ def cmd_serve(args):
     #  - the browser sends an entry id and a profile name, never a file path
     token = secrets.token_urlsafe(24)
     allowed_hosts = {f"127.0.0.1:{args.port}", f"localhost:{args.port}"}
-    scan_lock = threading.Lock()          # one scan at a time
+    scan_lock = threading.Lock()          # one live scan at a time
+    # Live scans wait in a short queue: one running and up to three waiting. A
+    # request beyond that is refused at once (HTTP 429) instead of piling up a
+    # waiting thread, and a real scan, for every request a script can send.
+    MAX_LIVE_QUEUE = 4
+    gate = {"pending": 0}
+    gate_lock = threading.Lock()
 
     class Handler(http.server.SimpleHTTPRequestHandler):
-        def _json(self, status, payload):
+        def _json(self, status, payload, headers=None):
             body = json.dumps(payload).encode()
             self.send_response(status)
             self.send_header("Content-Type", "application/json")
+            for name, value in (headers or {}).items():
+                self.send_header(name, value)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
@@ -293,6 +301,20 @@ def cmd_serve(args):
                     return self._json(200, scanning.all_status())
                 except Exception as exc:  # scanner support is optional
                     return self._json(200, {"scanners": [], "profiles": [], "error": str(exc)})
+            if self.path == "/api/results":          # the benchmark ledger; runs no scans
+                try:
+                    from lib import scanning
+                    return self._json(200, scanning.load_results())
+                except Exception as exc:
+                    return self._json(200, {"rows": [], "coverage": {}, "total": 0, "error": str(exc)})
+            if self.path.startswith("/api/scan-status"):
+                from urllib.parse import parse_qs, urlsplit
+                profile = parse_qs(urlsplit(self.path).query).get("profile", [""])[0]
+                try:
+                    from lib import scanning
+                    return self._json(200, {"wait_seconds": scanning.pacing_wait(profile)})
+                except Exception:
+                    return self._json(200, {"wait_seconds": 0})
             self._json(404, {"error": "not found"})
 
         def do_POST(self):
@@ -315,12 +337,40 @@ def cmd_serve(args):
                 return self._json(400, {"error": "expected JSON with 'entry' and 'profile'"})
             try:
                 from lib import scanning
-                with scan_lock:
-                    result, cached = scanning.scan_entry(entry, profile, use_cache=not body.get("fresh"))
+                use_cache = not body.get("fresh")
+                # 1) Instant answers (errors, saved results) never wait behind a slow scan.
+                done = scanning.peek(entry, profile, use_cache)
+                if done is not None:
+                    result, cached = done
+                    result["cached"] = cached
+                    return self._json(200, result)
+                # 2) A live scan is needed: bounded queue, one runs at a time.
+                with gate_lock:
+                    busy = gate["pending"] >= MAX_LIVE_QUEUE
+                    if not busy:
+                        gate["pending"] += 1
+                if busy:
+                    return self._json(429, {"verdict": "error", "cached": False,
+                                            "error": "The server is busy with other scans. Wait a minute and try again."},
+                                      headers={"Retry-After": "30"})
+                try:
+                    with scan_lock:
+                        result, cached = scanning.scan_entry(entry, profile, use_cache)
+                finally:
+                    with gate_lock:
+                        gate["pending"] -= 1
                 result["cached"] = cached
                 self._json(200, result)
             except Exception as exc:  # a scanner problem must never crash the server
                 self._json(200, {"verdict": "error", "error": f"scan failed: {exc}"})
+
+    def warm_up():                    # check the scanners once at start, not inside the first requests
+        try:
+            from lib import scanning
+            scanning.all_status()
+        except Exception:
+            pass
+    threading.Thread(target=warm_up, daemon=True).start()
 
     handler = functools.partial(Handler, directory=UI_DIR)
     # 127.0.0.1 only: this site displays deliberately malicious skill text.

@@ -12,17 +12,19 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
 
 import yaml
 
-from lib.corpus import PASTURE_DIR, load_entries
+from lib.corpus import PASTURE_DIR, load_entries, tier_of
 from scanners.adapters import load_adapter
 
 SCANNERS_DIR = ".scanners"            # gitignored: venvs, key files, cache
 REGISTRY_PATH = os.path.join("scanners", "scanners.yaml")
 PROFILES_PATH = os.path.join("scanners", "profiles.yaml")
 CACHE_DIR = os.path.join(SCANNERS_DIR, "cache")
+RESULTS_DIR = os.path.join(SCANNERS_DIR, "results")      # the benchmark ledger
 
 
 # -- registry and profiles ---------------------------------------------------
@@ -88,17 +90,29 @@ _STATUS_TTL = 30          # seconds; running `--version` every request is slow
 _status_cache = {}
 
 
+_status_lock = threading.Lock()      # one real `--version` check at a time
+
+
 def scanner_status(scanner_id):
     cached = _status_cache.get(scanner_id)
     if cached and time.time() - cached[0] < _STATUS_TTL:
         return dict(cached[1])
-    try:
-        ok, detail = get_adapter(scanner_id).check()
-    except Exception as exc:  # a broken adapter must not take the app down
-        ok, detail = False, "adapter error: %s" % exc
-    status = {"id": scanner_id, "ready": ok, "detail": detail}
-    _status_cache[scanner_id] = (time.time(), status)
-    return dict(status)
+    with _status_lock:                # many requests at once must not each start a process
+        cached = _status_cache.get(scanner_id)
+        if cached and time.time() - cached[0] < _STATUS_TTL:
+            return dict(cached[1])
+        try:
+            adapter = get_adapter(scanner_id)
+            version = adapter.known_version()
+            if version and os.path.exists(adapter.executable()):
+                ok, detail = True, version            # already verified; no process needed
+            else:
+                ok, detail = adapter.check()
+        except Exception as exc:  # a broken adapter must not take the app down
+            ok, detail = False, "adapter error: %s" % exc
+        status = {"id": scanner_id, "ready": ok, "detail": detail}
+        _status_cache[scanner_id] = (time.time(), status)
+        return dict(status)
 
 
 def profile_status(profile_id):
@@ -121,9 +135,11 @@ def profile_status(profile_id):
     env_file = profile.get("env_file")
     if status["ready"] and env_file:
         env = read_env_file(env_file)
-        if not env.get("SKILL_SCANNER_LLM_API_KEY"):
+        key_var = profile.get("key_var", "SKILL_SCANNER_LLM_API_KEY")
+        if not env.get(key_var):
             status["ready"] = False
-            status["detail"] = "no API key: create .scanners/%s from its .template and add your key" % env_file
+            status["detail"] = ("no API key: copy scanners/templates/%s.template to .scanners/%s and put "
+                                "your key in %s (or run ./install.sh)" % (env_file, env_file, key_var))
     return status
 
 
@@ -245,59 +261,210 @@ def _content_hash(skill_dir):
 CACHE_FORMAT = "2"        # bump when the stored result shape or merging changes
 
 
-def _cache_path(adapter, profile, env, skill_dir):
+def _model_of(env):
+    return env.get("SKILL_SCANNER_LLM_MODEL") or env.get("SKILLSPECTOR_MODEL") or ""
+
+
+def _cache_path(adapter, profile, env, content_hash):
+    # Keep this exact layout: changing it orphans every cached result, and LLM
+    # results cost real tokens to recreate.
     parts = [CACHE_FORMAT, adapter.id, adapter.version(), profile["id"], profile.get("mode", ""),
-             profile.get("policy", ""), env.get("SKILL_SCANNER_LLM_MODEL", ""),
-             _content_hash(skill_dir)]
+             profile.get("policy", ""), env.get("SKILL_SCANNER_LLM_MODEL", ""), env.get("SKILLSPECTOR_MODEL", ""),
+             content_hash]
     key = hashlib.sha256("|".join(parts).encode()).hexdigest()
     return os.path.join(CACHE_DIR, key + ".json")
 
 
-def scan_entry(entry_id, profile_id, use_cache=True):
-    """Scan one corpus entry with one profile. Returns (result_dict, from_cache)."""
+_last_live = {}           # profile id -> when its last live (uncached) scan finished
+
+
+def _wait_for_pacing(profile):
+    """Free LLM plans cap tokens per minute. If the profile asks for a pause
+    between scans, wait until enough time has passed since the last one."""
+    pause = profile.get("min_seconds_between_scans", 0)
+    last = _last_live.get(profile["id"])
+    if pause and last:
+        wait = pause - (time.time() - last)
+        if wait > 0:
+            time.sleep(wait)
+
+
+def pacing_wait(profile_id):
+    """Seconds until this profile may start another live scan (0 = now)."""
+    profile = load_profiles().get(profile_id, {})
+    pause, last = profile.get("min_seconds_between_scans", 0), _last_live.get(profile_id)
+    if not pause or not last:
+        return 0
+    return max(0, int(pause - (time.time() - last) + 0.999))
+
+
+# -- benchmark ledger --------------------------------------------------------
+# The latest result per (profile, skill), so the benchmark can fill in as skills
+# are scanned from the quiz page or the terminal. Errors are never recorded.
+
+_ledger_lock = threading.Lock()
+
+
+def _ledger_path(profile_id):
+    return os.path.join(RESULTS_DIR, profile_id + ".json")
+
+
+def _read_ledger(profile_id):
+    try:
+        with open(_ledger_path(profile_id)) as handle:
+            return json.load(handle)
+    except (OSError, ValueError):
+        return {}
+
+
+def _utc(timestamp):
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(timestamp))
+
+
+def _record(profile, entry_id, result, fingerprint, when):
+    if result.get("verdict") not in ("flagged", "clean"):
+        return
+    keep = {k: result.get(k) for k in (
+        "verdict", "scanner", "scanner_version", "mode", "max_severity", "score",
+        "recommendation", "overall_severity", "duration_seconds", "tokens")}
+    keep["findings"] = len([f for f in result.get("findings", []) if f.get("severity") != "info"])
+    with _ledger_lock:
+        ledger = _read_ledger(profile["id"])
+        ledger[entry_id] = {"entry": entry_id, "at": _utc(when), "fingerprint": fingerprint, "result": keep}
+        os.makedirs(RESULTS_DIR, exist_ok=True)
+        tmp = _ledger_path(profile["id"]) + ".tmp"
+        with open(tmp, "w") as handle:
+            json.dump(ledger, handle, indent=1)
+        os.replace(tmp, _ledger_path(profile["id"]))        # atomic: never a half-written file
+
+
+def _outcome(label, verdict):
+    if label == "malicious":
+        return "caught" if verdict == "flagged" else "missed"
+    return "false alarm" if verdict == "flagged" else "correct clean"
+
+
+def load_results():
+    """The ledger joined with the corpus labels. Runs no scans."""
+    entries = {e.id: e for e in load_entries(PASTURE_DIR)}
+    rows, coverage = [], {}
+    for profile_id, profile in load_profiles().items():
+        try:
+            version = get_adapter(profile["scanner"]).version()
+        except Exception:
+            version = ""
+        env = read_env_file(profile.get("env_file")) if profile.get("env_file") else {}
+        hashes = {entry_id: _content_hash(e.skill_dir) for entry_id, e in entries.items()}
+
+        # Pick up scans that are in the cache but not yet in the ledger (made before
+        # the ledger existed, or by another process). Costs nothing: no scanner runs.
+        if version:
+            adapter = get_adapter(profile["scanner"])
+            for entry_id, content_hash in hashes.items():
+                cache = _cache_path(adapter, profile, env, content_hash)
+                fingerprint = {"scanner_version": version, "model": _model_of(env), "content_hash": content_hash}
+                if os.path.exists(cache) and _read_ledger(profile_id).get(entry_id, {}).get("fingerprint") != fingerprint:
+                    try:
+                        with open(cache) as handle:
+                            _record(profile, entry_id, json.load(handle), fingerprint, os.path.getmtime(cache))
+                    except (OSError, ValueError):
+                        pass
+
+        ledger = _read_ledger(profile_id)
+        fresh = stale = 0
+        for entry_id, record in ledger.items():
+            entry = entries.get(entry_id)
+            if entry is None:
+                continue                                      # skill was removed from the corpus
+            current = {"scanner_version": version, "model": _model_of(env), "content_hash": hashes[entry_id]}
+            is_stale = bool(version) and record["fingerprint"] != current
+            fresh, stale = (fresh, stale + 1) if is_stale else (fresh + 1, stale)
+            result = record["result"]
+            label = entry.expected["verdict"]
+            rows.append({
+                "entry": entry_id, "profile": profile_id, "label": label,
+                "category": entry.category, "tier": tier_of(entry.id)[0],
+                "outcome": _outcome(label, result["verdict"]), "stale": is_stale, "at": record["at"],
+                "verdict": result["verdict"], "max_severity": result.get("max_severity"),
+                "score": result.get("score"), "recommendation": result.get("recommendation"),
+                "overall_severity": result.get("overall_severity"), "tokens": result.get("tokens"),
+            })
+        coverage[profile_id] = {"scanned": fresh, "stale": stale, "total": len(entries)}
+    return {"rows": rows, "coverage": coverage, "total": len(entries)}
+
+
+def _prepare(entry_id, profile_id, use_cache=True):
+    """Everything that can be answered without running a scanner.
+
+    Returns (context, done). `done` is (result, from_cache) when the answer is
+    already known (an error, or a saved result); otherwise it is None and
+    `context` describes the live scan that is needed.
+    """
     entry = find_entry(entry_id)
     if entry is None:
-        return {"verdict": "error", "error": "unknown entry %r" % entry_id}, False
+        return None, ({"verdict": "error", "error": "unknown entry %r" % entry_id}, False)
     profiles = load_profiles()
     if profile_id not in profiles:
-        return {"verdict": "error", "error": "unknown profile %r" % profile_id}, False
+        return None, ({"verdict": "error", "error": "unknown profile %r" % profile_id}, False)
     profile = profiles[profile_id]
 
     status = profile_status(profile_id)
     if not status["ready"]:
-        return {"verdict": "error", "scanner": profile["scanner"],
-                "error": status["detail"]}, False
+        return None, ({"verdict": "error", "scanner": profile["scanner"], "error": status["detail"]}, False)
 
     adapter = get_adapter(profile["scanner"])
     env = read_env_file(profile.get("env_file")) if profile.get("env_file") else {}
-    cache = _cache_path(adapter, profile, env, entry.skill_dir)
+    content_hash = _content_hash(entry.skill_dir)
+    cache = _cache_path(adapter, profile, env, content_hash)
+    fingerprint = {"scanner_version": adapter.version(), "model": _model_of(env), "content_hash": content_hash}
 
     if use_cache and os.path.exists(cache):
         try:
             with open(cache) as handle:
-                return json.load(handle), True
+                cached = json.load(handle)
+            # Backfill the ledger from earlier scans the first time we see one.
+            if _read_ledger(profile_id).get(entry_id, {}).get("fingerprint") != fingerprint:
+                _record(profile, entry_id, cached, fingerprint, os.path.getmtime(cache))
+            return None, (cached, True)
         except (OSError, ValueError):
             pass
 
-    result = adapter.scan(entry.skill_dir, profile, extra_env=env).to_dict()
+    context = {"entry": entry, "entry_id": entry_id, "profile": profile, "adapter": adapter,
+               "env": env, "cache": cache, "fingerprint": fingerprint}
+    return context, None
+
+
+def peek(entry_id, profile_id, use_cache=True):
+    """The instant answer if there is one: (result, from_cache), else None.
+
+    The web server calls this first and only queues the request for a live
+    scan when it returns None, so cheap requests never wait behind a slow scan.
+    """
+    return _prepare(entry_id, profile_id, use_cache)[1]
+
+
+def scan_entry(entry_id, profile_id, use_cache=True):
+    """Scan one corpus entry with one profile. Returns (result_dict, from_cache)."""
+    context, done = _prepare(entry_id, profile_id, use_cache)
+    if done is not None:
+        return done
+
+    profile, entry = context["profile"], context["entry"]
+    _wait_for_pacing(profile)
+    try:
+        result = context["adapter"].scan(entry.skill_dir, profile, extra_env=context["env"]).to_dict()
+    finally:
+        _last_live[profile["id"]] = time.time()
     if result["verdict"] != "error":          # never cache failures
         os.makedirs(CACHE_DIR, exist_ok=True)
-        with open(cache, "w") as handle:
+        with open(context["cache"], "w") as handle:
             json.dump(result, handle)
+        _record(profile, context["entry_id"], result, context["fingerprint"], time.time())
     return result, False
 
 
 def scan_many(entry_ids, profile_id, on_result, use_cache=True):
-    """Scan several entries, pausing between uncached scans if the profile asks."""
-    profile = load_profiles().get(profile_id, {})
-    pause = profile.get("min_seconds_between_scans", 0)
-    last_live = None
+    """Scan several entries in turn. Pacing between live scans happens in scan_entry."""
     for entry_id in entry_ids:
-        if pause and last_live is not None:
-            wait = pause - (time.time() - last_live)
-            if wait > 0:
-                time.sleep(wait)
         result, cached = scan_entry(entry_id, profile_id, use_cache)
-        if not cached:
-            last_live = time.time()
         on_result(entry_id, result, cached)

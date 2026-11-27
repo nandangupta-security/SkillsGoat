@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkillsGoat · Benchmark</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .bench { max-width: 1100px; margin: 0 auto; }
+  .note { color: var(--muted); font-size: .9rem; margin: 6px 0; }
+  .filters { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+  table.cmp { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  table.cmp th, table.cmp td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--card-border); }
+  table.cmp td.good { color: var(--good); } table.cmp td.bad { color: var(--bad); } table.cmp td.none { color: var(--muted); }
+  .scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>SkillsGoat</h1>
+  <p>See what each scanner caught and missed, filled in as you scan skills.</p>
+  <nav class="topnav"><a href="index.html">Learn</a><a href="quiz.html">Quiz</a><a href="benchmark.html" aria-current="page">Benchmark</a></nav>
+</header>
+<main class="bench" id="app"></main>
+
+<script>
+(function () {
+  var MIN_MALICIOUS = 8;              // detection rate needs at least this many malicious skills scanned
+  var app = document.getElementById("app");
+
+  function el(tag, props, children) {
+    var n = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      if (props[k] === null) return;
+      if (k === "text") n.textContent = props[k];
+      else if (k === "class") n.className = props[k];
+      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), props[k]);
+      else n.setAttribute(k, props[k]);
+    });
+    (children || []).forEach(function (c) { if (c) n.appendChild(c); });
+    return n;
+  }
+  function getJSON(path) {
+    return fetch(path, { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+  }
+
+  var SYMBOL = { "caught": "✓", "correct clean": "✓", "missed": "✗", "false alarm": "!" };
+  function cls(outcome) { return outcome === "caught" || outcome === "correct clean" ? "good" : (outcome ? "bad" : "none"); }
+
+  function shortName(id) { return id.replace(/^\d+-/, ""); }
+
+  Promise.all([getJSON("data/corpus.json"), getJSON("/api/results"), getJSON("/api/scanners")])
+    .then(function (all) { render(all[0], all[1], all[2]); })
+    .catch(function () {
+      app.appendChild(el("div", { class: "panel" }, [
+        el("h3", { text: "Couldn't load the benchmark" }),
+        el("p", { text: "This page needs the SkillsGoat server. Run: python3 goat.py export && python3 goat.py serve" })
+      ]));
+    });
+
+  function render(corpus, results, scanners) {
+    var skills = [];
+    corpus.forEach(function (c) {
+      c.entries.forEach(function (e) { skills.push({ id: e.id, label: e.verdict, category: c.title, tier: e.tier }); });
+    });
+    skills.sort(function (a, b) { return a.id < b.id ? -1 : 1; });
+    var profiles = scanners.profiles || [];
+
+    // rows by profile and entry
+    var byProfile = {};
+    (results.rows || []).forEach(function (r) { (byProfile[r.profile] = byProfile[r.profile] || {})[r.entry] = r; });
+
+    app.appendChild(el("div", { class: "panel" }, [
+      el("h3", { text: "How this fills in" }),
+      el("p", { class: "note", text: "Each square is one skill. It lights up when a scanner has scanned it, from the Quiz page or with `python3 goat.py scan`. Nothing is scanned by opening this page." }),
+      el("p", { class: "note", text: "This page shows the answer labels, so it spoils the quiz. Different scanners may have scanned different skills; only compare them on skills they share." })
+    ]));
+
+    // Metrics: one row per scanner profile, shown above the skill-by-skill table.
+    var metrics = el("table", { class: "cmp" }, [el("tr", {}, [
+      "Scanner", "Skills scanned", "Malicious caught", "Missed", "False alarms", "Detection rate"
+    ].map(function (h) { return el("th", { text: h }); }))]);
+    profiles.forEach(function (p) {
+      var rows = byProfile[p.id] || {};
+      var scanned = skills.filter(function (s) { return rows[s.id] && !rows[s.id].stale; });
+      var stale = skills.filter(function (s) { return rows[s.id] && rows[s.id].stale; });
+      var mal = scanned.filter(function (s) { return s.label === "malicious"; });
+      var ben = scanned.filter(function (s) { return s.label === "benign"; });
+      var caught = mal.filter(function (s) { return rows[s.id].outcome === "caught"; }).length;
+      var falseAlarms = ben.filter(function (s) { return rows[s.id].outcome === "false alarm"; }).length;
+      var rate = mal.length >= MIN_MALICIOUS ? Math.round(caught / mal.length * 100) + "%" : "n/a";
+      metrics.appendChild(el("tr", {}, [
+        el("td", { text: (p.scanner_name || p.scanner) + " · " + p.label }),
+        el("td", { text: scanned.length + " / " + skills.length + (stale.length ? " (" + stale.length + " outdated)" : "") }),
+        el("td", { text: caught + " / " + mal.length }),
+        el("td", { text: String(mal.length - caught) }),
+        el("td", { text: falseAlarms + " / " + ben.length + " benign" }),
+        el("td", { text: rate })
+      ]));
+    });
+    app.appendChild(el("div", { class: "panel" }, [
+      el("h3", { text: "Metrics" }),
+      el("div", { class: "scroll" }, [metrics]),
+      el("p", { class: "note", text: "A detection rate needs at least " + MIN_MALICIOUS + " malicious skills scanned; until then it shows n/a. Different scanners may have scanned different skills, so compare them only on skills they share." })
+    ]));
+
+    // comparison table
+    var filter = "all";
+    var tableHost = el("div", { class: "scroll" });
+    var filters = el("div", { class: "filters" });
+    [["all", "All skills"], ["scanned", "Scanned at least once"], ["disagree", "Where scanners disagree"]].forEach(function (f) {
+      var b = el("button", { class: "ghost small", text: f[1], "aria-pressed": String(f[0] === filter) });
+      b.addEventListener("click", function () { filter = f[0]; drawTable(); Array.prototype.forEach.call(filters.children, function (x, i) { x.setAttribute("aria-pressed", String(["all", "scanned", "disagree"][i] === filter)); }); });
+      filters.appendChild(b);
+    });
+    function drawTable() {
+      tableHost.textContent = "";
+      var head = el("tr", {}, [el("th", { text: "Skill" }), el("th", { text: "Label" })]);
+      profiles.forEach(function (p) { head.appendChild(el("th", { text: (p.scanner_name || p.scanner) + " · " + p.label })); });
+      var table = el("table", { class: "cmp" }, [head]);
+      skills.forEach(function (s) {
+        var cells = profiles.map(function (p) { var r = (byProfile[p.id] || {})[s.id]; return r && !r.stale ? r : null; });
+        var have = cells.filter(Boolean);
+        if (filter === "scanned" && !have.length) return;
+        if (filter === "disagree") {
+          var set = {}; have.forEach(function (r) { set[r.outcome] = 1; });
+          if (have.length < 2 || Object.keys(set).length < 2) return;
+        }
+        var tr = el("tr", {}, [el("td", { text: s.id }), el("td", { text: s.label })]);
+        cells.forEach(function (r) {
+          tr.appendChild(r ? el("td", { class: cls(r.outcome), text: SYMBOL[r.outcome] + " " + r.outcome })
+                           : el("td", { class: "none", text: "·  not scanned" }));
+        });
+        table.appendChild(tr);
+      });
+      tableHost.appendChild(table);
+    }
+    drawTable();
+    app.appendChild(el("div", { class: "panel" }, [el("h3", { text: "Skill by skill" }), filters, tableHost]));
+  }
+})();
+</script>
+</body>
+</html>

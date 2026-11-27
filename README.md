@@ -96,6 +96,17 @@ sight, to one file removed, to purpose-built to slip past pattern
 matching. Browse by category to learn a topic, or by tier to see how
 hard the corpus can get.
 
+## Quick start
+
+On macOS or Linux (including Kali), one command installs everything and starts the app:
+
+    ./install.sh
+
+It sets up its own Python environment, checks the corpus, installs the optional scanners
+(see [docs/SCANNERS.md](docs/SCANNERS.md)) and opens the web UI at http://127.0.0.1:8765/.
+Run it again any time to start the app; steps already done are skipped. Use
+`./install.sh --no-scanners` to skip the scanners, or `--help` for all options.
+
 ## Try it
 
     pip install -r requirements.txt

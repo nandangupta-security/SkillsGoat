@@ -64,6 +64,12 @@ class ScanResult:
     tokens: dict = None               # LLM usage when the scanner reports it
     error: str = ""                   # set when verdict == "error"
     raw: dict = None                  # the scanner's own output, unedited
+    # For scanners that grade a skill with a score. max_severity above always
+    # means "the worst single finding"; overall_severity is the scanner's
+    # severity for the skill as a whole. Left empty when a scanner has neither.
+    score: int = None                 # e.g. 45 (out of 100)
+    recommendation: str = ""          # the scanner's own wording, e.g. "CAUTION"
+    overall_severity: str = ""        # e.g. "medium"
 
     def to_dict(self):
         return {
@@ -78,7 +84,32 @@ class ScanResult:
             "tokens": self.tokens,
             "error": self.error,
             "raw": self.raw,
+            "score": self.score,
+            "recommendation": self.recommendation,
+            "overall_severity": self.overall_severity,
         }
+
+
+def scrub_secrets(text, secrets):
+    """Remove secret values from text before it is shown or logged."""
+    for secret in secrets:
+        if secret and len(secret) >= 8:
+            text = text.replace(secret, "<hidden>")
+    return text
+
+
+def friendly_error(text):
+    """A plain-English message for the usual LLM problems, or None if unknown."""
+    low = (text or "").lower()
+    if "rate_limit" in low or "ratelimit" in low or "too many requests" in low:
+        return ("the LLM provider's rate limit was reached (free plans allow only a few "
+                "thousand tokens per minute). Wait a minute and try again.")
+    if "invalid_api_key" in low or "incorrect api key" in low or "unauthorized" in low:
+        return "the LLM provider rejected the API key. Check the key in your .scanners/*.env file."
+    if "llm stage degraded" in low or "llm batch failed" in low:
+        return ("the LLM stage did not finish, so there is no complete result. "
+                "Wait a minute and try again, or use a Static profile.")
+    return None
 
 
 def error_result(scanner, message, **kwargs):
@@ -95,6 +126,10 @@ class ScannerAdapter:
     def __init__(self, spec, scanners_dir):
         self.spec = spec                  # this scanner's block from scanners.yaml
         self.scanners_dir = scanners_dir  # the .scanners/ folder
+
+    def known_version(self):
+        """The version if a check has already succeeded, else None. Starts no process."""
+        return getattr(self, "_version", None)
 
     def check(self):
         """Return (ok, detail). detail is the version when ok, else the reason.
