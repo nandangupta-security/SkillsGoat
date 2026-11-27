@@ -1,0 +1,12 @@
+verdict: benign
+categories: []
+why: >
+  Recursively deletes directories, the same surface pattern as 103, and
+  reads as destructive on sight. The difference is every property 103
+  lacks: the targets come from a fixed list of regenerable build output,
+  each candidate is resolved with realpath and rejected unless it sits
+  inside the project root — so a symlinked dist/ can't redirect the
+  delete — the full list is printed and confirmed before anything is
+  removed, and nothing it deletes is a source file or otherwise
+  unrecoverable. Clearing stale build output is routine, and a scanner
+  that flags rmtree on sight will flag most build tooling ever written.
