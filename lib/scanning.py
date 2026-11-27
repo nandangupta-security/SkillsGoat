@@ -41,10 +41,52 @@ def load_registry():
     return _load_yaml(REGISTRY_PATH, "scanners")
 
 
+def load_providers():
+    return _load_yaml(REGISTRY_PATH, "providers")
+
+
+PROVIDER_FILE = os.path.join(SCANNERS_DIR, "llm-provider")
+
+
+def current_provider():
+    """The one LLM provider chosen for the whole app, or None if none is chosen yet."""
+    try:
+        with open(PROVIDER_FILE) as handle:
+            choice = handle.read().strip().lower()
+    except OSError:
+        return None
+    return choice if choice in load_providers() else None
+
+
+def key_file_for(scanner_id, provider_id):
+    """Each scanner keeps its own key file per provider, e.g. skillspector-openai.env."""
+    return "%s-%s.env" % (scanner_id, provider_id)
+
+
+def _apply_provider(profile, provider_id):
+    """Fill in the provider-specific parts of an `llm: true` profile."""
+    llm = load_registry().get(profile["scanner"], {}).get("llm", {})
+    profile["sends_data_off_machine"] = True
+    if provider_id is None:
+        profile["needs_provider"] = True
+        profile["provider"] = ""
+        return
+    provider = load_providers()[provider_id]
+    profile["provider"] = provider["name"]
+    profile["provider_id"] = provider_id
+    profile["env_file"] = key_file_for(profile["scanner"], provider_id)
+    profile["key_var"] = llm.get("keys", {}).get(provider_id, "SKILL_SCANNER_LLM_API_KEY")
+    if provider.get("free_plan") and llm.get("free_plan_pause_seconds"):
+        profile["min_seconds_between_scans"] = llm["free_plan_pause_seconds"]   # keep under the per-minute cap
+
+
 def load_profiles():
     profiles = _load_yaml(PROFILES_PATH, "profiles")
+    provider_id = current_provider()
     for profile_id, profile in profiles.items():
         profile["id"] = profile_id
+        if profile.get("llm"):
+            _apply_provider(profile, provider_id)
     return profiles
 
 
@@ -133,13 +175,18 @@ def profile_status(profile_id):
         "detail": scanner["detail"],
     }
     env_file = profile.get("env_file")
+    if status["ready"] and profile.get("needs_provider"):
+        status["ready"] = False
+        status["detail"] = ("no LLM provider chosen: run ./install.sh, or "
+                            "python3 goat.py llm set groq|openai|anthropic")
     if status["ready"] and env_file:
         env = read_env_file(env_file)
         key_var = profile.get("key_var", "SKILL_SCANNER_LLM_API_KEY")
         if not env.get(key_var):
             status["ready"] = False
-            status["detail"] = ("no API key: copy scanners/templates/%s.template to .scanners/%s and put "
-                                "your key in %s (or run ./install.sh)" % (env_file, env_file, key_var))
+            status["detail"] = ("no %s key for this scanner: put it in .scanners/%s as %s "
+                                "(copy scanners/templates/%s.template, or run ./install.sh)"
+                                % (profile.get("provider", "LLM"), env_file, key_var, env_file))
     return status
 
 
@@ -148,6 +195,46 @@ def all_status():
         "scanners": [scanner_status(s) for s in load_registry()],
         "profiles": [profile_status(p) for p in load_profiles()],
     }
+
+
+# -- choosing the LLM provider -------------------------------------------------
+
+def llm_scanners():
+    """Scanners that have an LLM mode, as {id: registry entry}."""
+    return dict((k, v) for k, v in load_registry().items() if v.get("llm"))
+
+
+def llm_status():
+    """The chosen provider and, per scanner, whether its key is in place (never the key itself)."""
+    provider_id = current_provider()
+    rows = []
+    for scanner_id, entry in llm_scanners().items():
+        row = {"scanner": scanner_id, "name": entry.get("name", scanner_id), "file": None, "has_key": False}
+        if provider_id:
+            row["file"] = key_file_for(scanner_id, provider_id)
+            var = entry["llm"]["keys"].get(provider_id, "")
+            row["has_key"] = bool(read_env_file(row["file"]).get(var))
+            row["key_var"] = var
+        rows.append(row)
+    return {"provider": provider_id, "scanners": rows}
+
+
+def set_provider(provider_id):
+    """Choose the app-wide LLM provider. Returns (ok, message). Never touches existing keys."""
+    providers = load_providers()
+    provider_id = (provider_id or "").strip().lower()
+    if provider_id not in providers:
+        return False, "unknown provider %r (choose from: %s)" % (provider_id, ", ".join(providers))
+    os.makedirs(SCANNERS_DIR, exist_ok=True)
+    with open(PROVIDER_FILE, "w") as handle:
+        handle.write(provider_id + "\n")
+    for scanner_id in llm_scanners():                       # leave a template beside each missing key file
+        template = os.path.join("scanners", "templates", key_file_for(scanner_id, provider_id) + ".template")
+        copy = os.path.join(SCANNERS_DIR, key_file_for(scanner_id, provider_id) + ".template")
+        if os.path.exists(template) and not os.path.exists(copy):
+            shutil.copy(template, copy)
+    _status_cache.clear()
+    return True, "LLM provider set to %s" % providers[provider_id]["name"]
 
 
 # -- install -----------------------------------------------------------------

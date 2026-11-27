@@ -149,6 +149,7 @@
         getJSON("/api/results").then(function (d) {
           var c = (d.coverage || {})[p.id];
           if (c) bench.textContent = "Added to the benchmark: " + (p.scanner_name || p.scanner) + " · " + p.label +
+            (p.mode === "judge" && p.provider ? " · " + p.provider : "") +
             ", " + c.scanned + " of " + c.total + " skills scanned. See the Benchmark page.";
         }).catch(function () {});
       }
@@ -189,7 +190,8 @@
         el("div", { class: "sg-card-h" }, [
           el("span", { class: "sg-dot" }),
           el("strong", { text: p.scanner_name || p.scanner }),
-          el("span", { class: "sg-chip", text: p.label })
+          el("span", { class: "sg-chip", text: p.label }),
+          p.mode === "judge" && p.provider ? el("span", { class: "sg-chip", text: p.provider }) : null
         ]),
         el("p", { class: "sg-note", text: privacy }),
         p.ready ? null : el("p", { class: "sg-note", text: "Not ready: " + p.detail }),

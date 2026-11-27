@@ -441,11 +441,42 @@ def cmd_scanners(args):
     for p in status["profiles"]:
         where = f"sends skill text to {p['provider'] or 'a remote service'}" if p["sends_data_off_machine"] else "runs locally"
         state = "ready" if p["ready"] else "not ready"
-        print(f"  {p['id']:<14} {state:<10} {p['label']}  [{where}]")
+        print(f"  {p['id']:<22} {state:<10} {p['label']}  [{where}]")
         if not p["ready"]:
-            print(f"  {'':<14} {'':<10} -> {p['detail']}")
+            print(f"  {'':<22} {'':<10} -> {p['detail']}")
     if args.action == "doctor" and not any(p["ready"] for p in status["profiles"]):
         print("\nNo profile is ready. Everything else in SkillsGoat still works.")
+
+
+def cmd_llm(args):
+    """Choose the one LLM provider for every scanner, and show which keys are in place."""
+    from lib import scanning
+
+    if args.action == "set":
+        if not args.provider:
+            raise SystemExit("usage: goat.py llm set <provider>   (groq, openai or anthropic)")
+        ok, message = scanning.set_provider(args.provider)
+        print(("OK: " if ok else "FAILED: ") + message)
+        if not ok:
+            raise SystemExit(1)
+    status = scanning.llm_status()
+    providers = scanning.load_providers()
+    if args.plain:                          # for install.sh: no key values, only names and yes/no
+        pid = status["provider"]
+        print("\t".join(["provider", pid or "-", providers[pid]["name"] if pid else "-"]))
+        for row in status["scanners"]:
+            print("\t".join(["scanner", row["scanner"], row["name"], row["file"] or "-",
+                             row.get("key_var", "-"), "yes" if row["has_key"] else "no"]))
+        return
+    if not status["provider"]:
+        print("No LLM provider chosen. Choose one: python3 goat.py llm set groq|openai|anthropic")
+        return
+    print(f"LLM provider: {providers[status['provider']]['name']}  (used by every scanner's Static + LLM mode)")
+    for row in status["scanners"]:
+        mark = "key set    " if row["has_key"] else "key MISSING"
+        print(f"  {row['name']:<22} {mark}  .scanners/{row['file']}  ({row['key_var']})")
+    if not all(r["has_key"] for r in status["scanners"]):
+        print("Add a key by running ./install.sh, or copy the .template beside each file and fill it in.")
 
 
 def cmd_scan(args):
@@ -518,8 +549,14 @@ def main():
     scanners_parser.add_argument("scanner", nargs="?", help="scanner id, for install (e.g. skill-scanner)")
     scanners_parser.set_defaults(func=cmd_scanners)
 
+    llm_parser = subparsers.add_parser("llm", help="choose the LLM provider used by every scanner")
+    llm_parser.add_argument("action", choices=["show", "set"])
+    llm_parser.add_argument("provider", nargs="?", help="groq, openai or anthropic (for set)")
+    llm_parser.add_argument("--plain", action="store_true", help=argparse.SUPPRESS)
+    llm_parser.set_defaults(func=cmd_llm)
+
     scan_parser = subparsers.add_parser("scan", help="scan corpus entries with a scanner profile")
-    scan_parser.add_argument("--profile", default="static", help="profile id (default: static)")
+    scan_parser.add_argument("--profile", default="skill-scanner-static", help="profile id (default: skill-scanner-static)")
     scan_parser.add_argument("--entry", action="append", help="entry id; repeat for several")
     scan_parser.add_argument("--all", action="store_true", help="scan every entry")
     scan_parser.add_argument("--no-cache", action="store_true", help="ignore cached results")
