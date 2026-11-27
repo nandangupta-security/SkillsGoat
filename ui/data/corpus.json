@@ -1,7 +1,7 @@
 [
  {
   "slug": "prompt-injection",
-  "title": "What is Prompt Injection?",
+  "title": "Prompt Injection",
   "blocks": [
    {
     "type": "p",
@@ -68,7 +68,7 @@
  },
  {
   "slug": "indirect-injection",
-  "title": "What is Indirect Prompt Injection?",
+  "title": "Indirect Prompt Injection",
   "blocks": [
    {
     "type": "p",
@@ -135,7 +135,7 @@
  },
  {
   "slug": "data-exfiltration",
-  "title": "What is Data Exfiltration?",
+  "title": "Data Exfiltration",
   "blocks": [
    {
     "type": "p",
@@ -202,7 +202,7 @@
  },
  {
   "slug": "destructive-command",
-  "title": "What is a Destructive Command?",
+  "title": "Destructive Command",
   "blocks": [
    {
     "type": "p",
